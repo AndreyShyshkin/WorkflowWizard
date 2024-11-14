@@ -57,13 +57,17 @@ function Auth() {
     <div id="login">
       SingIn
       <div>
+        <span>Username</span>
         <input
           type="text"
           ref={usernameData}
           style={{ display: isRegistrationSelected ? "block" : "none" }}
         />
+        <span>Email</span>
         <input type="email" ref={loginData} />
+        <span>Password</span>
         <input type="password" ref={passwordData} />
+        <span>Confirm Password</span>
         <input
           type="password"
           ref={passwordCheck}
