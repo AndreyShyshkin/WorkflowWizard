@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-function Home() {
+function Welcome() {
   const [user, setUser] = useState(null);
   const auth = getAuth();
 
@@ -24,7 +24,10 @@ function Home() {
     <div>
       <h1>Home</h1>
       {user ? (
-        <span>Вы вошли в систему как {user.displayName}</span>
+        <span>
+          Вы вошли в систему как {user.displayName},
+          <Link to="/main"> войти в проект</Link>
+        </span>
       ) : (
         <Link to="/auth">login</Link>
       )}
@@ -32,4 +35,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default Welcome;
