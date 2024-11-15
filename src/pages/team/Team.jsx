@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getDatabase, ref, get, update } from "firebase/database";
@@ -9,6 +9,8 @@ function Team() {
   const [user, setUser] = useState(null);
   const [teamStatus, setTeamStatus] = useState({ exists: null, member: null });
   const [teamUsers, setTeamUsers] = useState([]); // Список пользователей команды
+  const [userProjects, setUserProjects] = useState([]);
+  const [userRole, setUserRole] = useState(null); // Роль пользователя
   const auth = getAuth();
   const database = getDatabase();
   const urlParams = new URLSearchParams(window.location.search);
@@ -21,6 +23,7 @@ function Team() {
         setUser(currentUser);
         checkTeamStatus(currentUser.uid);
         updateWorkStatus(currentUser.uid);
+        fetchUserProjects();
       } else {
         setUser(null);
         navigate("/auth");
@@ -31,6 +34,21 @@ function Team() {
       unsubscribe();
     };
   }, [auth, navigate]);
+
+  const fetchUserProjects = async () => {
+    try {
+      const projectsRef = ref(database, `teams/${teamName}/projects`);
+      const snapshot = await get(projectsRef);
+      if (snapshot.exists()) {
+        const projects = Object.keys(snapshot.val() || {});
+        setUserProjects(projects);
+      } else {
+        setUserProjects([]); // Если проектов нет, очищаем массив
+      }
+    } catch (error) {
+      console.error("Error fetching user projects:", error.code, error.message);
+    }
+  };
 
   const updateWorkStatus = async (userId) => {
     try {
@@ -77,6 +95,7 @@ function Team() {
         setTeamStatus({ exists: true, member: Boolean(isMember) });
 
         if (isMember) {
+          setUserRole(teamData.users[userId]?.role || "view"); // Получение роли пользователя
           loadTeamUsers(); // Загружаем список пользователей
         }
       } else {
@@ -124,6 +143,7 @@ function Team() {
         });
 
         await update(ref(database), updates);
+        fetchUserProjects();
         navigate("/createTeam");
       }
     } catch (error) {
@@ -131,6 +151,41 @@ function Team() {
     }
   };
 
+  const handleLogoutTeam = async () => {
+    const confirmLogout = window.confirm(
+      "Вы уверены, что хотите выйти из команды?",
+    );
+    if (!confirmLogout) return; // Если пользователь нажал "Отмена", выходим из функции
+
+    try {
+      const teamUsersRef = ref(database, `teams/${teamName}/users`);
+
+      const snapshot = await get(teamUsersRef);
+      if (snapshot.exists()) {
+        const users = snapshot.val();
+
+        delete users[user.uid];
+
+        const remainingUsers = Object.keys(users);
+
+        if (remainingUsers.length === 0) {
+          await update(ref(database, `teams`), {
+            [teamName]: null,
+          });
+        } else {
+          await update(teamUsersRef, {
+            [user.uid]: null,
+          });
+        }
+
+        navigate("/createTeam");
+      } else {
+        console.error("Ошибка: команда не найдена.");
+      }
+    } catch (error) {
+      console.error("Ошибка при выходе из команды:", error);
+    }
+  };
   return (
     <div>
       {user ? (
@@ -146,8 +201,31 @@ function Team() {
               {user.displayName} Добро пожаловать в команду {teamName}
             </span>
             <button onClick={handleChangeTeam}>Сменить команду</button>
-            <CreateProject />
-            <InviteOnTeam />
+            <button onClick={handleLogoutTeam}>Выход</button>
+            {userProjects.length > 0 ? (
+              <div>
+                <h3>Team Projects</h3>
+                <ul>
+                  {userProjects.map((project) => (
+                    <li key={project}>
+                      <span>{project}</span>
+                      <Link
+                        to={`/team/project?teamname=${teamName}&projectname=${project}`}
+                        style={{ marginLeft: "10px" }}
+                      >
+                        Go to project
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <h3>The team does not have any projects yet.</h3>
+            )}
+
+            {["admin", "edit"].includes(userRole) && <CreateProject />}
+            {userRole === "admin" && <InviteOnTeam />}
+
             <h3>Состав команды:</h3>
             <ul>
               {teamUsers.map((teamUser) => (

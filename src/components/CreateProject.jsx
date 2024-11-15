@@ -6,7 +6,6 @@ import { useNavigate, Link } from "react-router-dom";
 function CreateProject() {
   const [user, setUser] = useState(null);
   const [projectName, setProjectName] = useState("");
-  const [userProjects, setUserProjects] = useState([]);
   const navigate = useNavigate();
   const auth = getAuth();
   const database = getDatabase();
@@ -17,7 +16,6 @@ function CreateProject() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        fetchUserProjects();
       } else {
         navigate("/login");
       }
@@ -25,21 +23,6 @@ function CreateProject() {
 
     return () => unsubscribe();
   }, [auth, navigate]);
-
-  const fetchUserProjects = async () => {
-    try {
-      const projectsRef = ref(database, `teams/${teamName}/projects`);
-      const snapshot = await get(projectsRef);
-      if (snapshot.exists()) {
-        const projects = Object.keys(snapshot.val() || {});
-        setUserProjects(projects);
-      } else {
-        setUserProjects([]); // Если проектов нет, очищаем массив
-      }
-    } catch (error) {
-      console.error("Error fetching user projects:", error.code, error.message);
-    }
-  };
 
   const handleCreateProject = async () => {
     const trimmedName = projectName.trim();
@@ -76,7 +59,6 @@ function CreateProject() {
         },
       );
       // Обновляем список проектов после создания
-      fetchUserProjects();
       navigate(`/team/project?teamname=${teamName}&projectname=${trimmedName}`);
     } catch (error) {
       console.error("Error creating project:", error.code, error.message);
@@ -85,26 +67,6 @@ function CreateProject() {
 
   return (
     <div>
-      {userProjects.length > 0 ? (
-        <div>
-          <h3>Team Projects</h3>
-          <ul>
-            {userProjects.map((project) => (
-              <li key={project}>
-                <span>{project}</span>
-                <Link
-                  to={`/team/project?teamname=${teamName}&projectname=${project}`}
-                  style={{ marginLeft: "10px" }}
-                >
-                  Go to project
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <h3>The team does not have any projects yet.</h3>
-      )}
       <input
         type="text"
         placeholder="Enter project name"
