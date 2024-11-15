@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { getDatabase, ref, get, child, set } from "firebase/database";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Invite() {
   const [inviteData, setInviteData] = useState(null);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const auth = getAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -84,13 +85,14 @@ function Invite() {
       }
 
       await set(userRef, {
-        userName: user.displayName,
+        username: user.displayName,
         role: role,
         access: access,
       });
       await set(inviteRef, null);
 
       alert("Invite accepted successfully!");
+      navigate("/team?name=" + teamName);
     } catch (err) {
       console.error("Error accepting invite:", err);
       setError("Failed to accept invite.");
@@ -112,7 +114,11 @@ function Invite() {
           {inviteData.role !== "admin" && <p>Access to: {inviteData.access}</p>}
           <button
             onClick={() =>
-              acceptInvite(inviteData.role, inviteData.access, inviteData.email)
+              acceptInvite(
+                inviteData.role,
+                inviteData.role !== "admin" && inviteData.access == null,
+                inviteData.email,
+              )
             }
           >
             Agree

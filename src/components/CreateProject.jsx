@@ -1,4 +1,4 @@
-import { getDatabase, ref, set, get, child } from "firebase/database";
+import { getDatabase, ref, set, get } from "firebase/database";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -14,14 +14,16 @@ function CreateProject() {
   const teamName = urlParams.get("name");
 
   useEffect(() => {
-    onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        fetchUserProjects(currentUser.uid);
+        fetchUserProjects();
       } else {
         navigate("/login");
       }
     });
+
+    return () => unsubscribe();
   }, [auth, navigate]);
 
   const fetchUserProjects = async () => {
@@ -29,7 +31,10 @@ function CreateProject() {
       const projectsRef = ref(database, `teams/${teamName}/projects`);
       const snapshot = await get(projectsRef);
       if (snapshot.exists()) {
-        setUserProjects(Object.keys(snapshot.val() || {}));
+        const projects = Object.keys(snapshot.val() || {});
+        setUserProjects(projects);
+      } else {
+        setUserProjects([]); // Если проектов нет, очищаем массив
       }
     } catch (error) {
       console.error("Error fetching user projects:", error.code, error.message);
@@ -52,7 +57,7 @@ function CreateProject() {
 
     const projectRef = ref(
       database,
-      "teams/" + teamName + "/projects/" + trimmedName,
+      `teams/${teamName}/projects/${trimmedName}`,
     );
     try {
       const snapshot = await get(projectRef);
@@ -60,25 +65,21 @@ function CreateProject() {
         console.log("Project name already exists");
         return;
       }
+      // Создаем проект и добавляем текущего пользователя как участника
       await set(
         ref(
           database,
-          "teams/" +
-            teamName +
-            "/projects/" +
-            trimmedName +
-            "/users/" +
-            user.uid,
+          `teams/${teamName}/projects/${trimmedName}/users/${user.uid}`,
         ),
         {
           userName: user.displayName,
         },
       );
-      navigate(
-        "/team/project?teamname=" + teamName + "&projectname=" + trimmedName,
-      );
+      // Обновляем список проектов после создания
+      fetchUserProjects();
+      navigate(`/team/project?teamname=${teamName}&projectname=${trimmedName}`);
     } catch (error) {
-      console.error("Error creating team:", error.code, error.message);
+      console.error("Error creating project:", error.code, error.message);
     }
   };
 
@@ -86,13 +87,14 @@ function CreateProject() {
     <div>
       {userProjects.length > 0 ? (
         <div>
-          <h3>Team Project</h3>
+          <h3>Team Projects</h3>
           <ul>
             {userProjects.map((project) => (
               <li key={project}>
                 <span>{project}</span>
                 <Link
                   to={`/team/project?teamname=${teamName}&projectname=${project}`}
+                  style={{ marginLeft: "10px" }}
                 >
                   Go to project
                 </Link>
@@ -101,7 +103,7 @@ function CreateProject() {
           </ul>
         </div>
       ) : (
-        <h3>Team not have project</h3>
+        <h3>The team does not have any projects yet.</h3>
       )}
       <input
         type="text"
