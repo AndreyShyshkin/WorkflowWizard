@@ -94,11 +94,11 @@ function CreateTeam() {
         console.log("Team name already exists");
         return;
       }
-
       await set(ref(database, "teams/" + trimmedName + "/users/" + user.uid), {
         username: user.displayName,
+        role: "admin",
       });
-      sendWelcomeEmail("shyshkinandrey06@gmail.com");
+      //sendWelcomeEmail("shyshkinandrey06@gmail.com");
       navigate("/team?name=" + trimmedName);
     } catch (error) {
       console.error("Error creating team:", error.code, error.message);

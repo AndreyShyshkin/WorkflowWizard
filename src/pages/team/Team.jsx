@@ -2,8 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getDatabase, ref, get, update } from "firebase/database";
+import CreateProject from "../../components/CreateProject";
 
-function Main() {
+function Team() {
   const [user, setUser] = useState(null);
   const [teamStatus, setTeamStatus] = useState({ exists: null, member: null });
   const auth = getAuth();
@@ -129,6 +130,7 @@ function Main() {
               {user.displayName} Добро пожаловать в команду {teamName}
             </span>
             <button onClick={handleChangeTeam}>Сменить команду</button>
+            <CreateProject />
           </div>
         )
       ) : (
@@ -138,4 +140,4 @@ function Main() {
   );
 }
 
-export default Main;
+export default Team;

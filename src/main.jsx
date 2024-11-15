@@ -6,7 +6,7 @@ import "./index.css";
 import Nav from "./components/nav/Nav.jsx";
 import Welcome from "./pages/welcome/Welcome.jsx";
 import Auth from "./pages/auth/Auth.jsx";
-import Main from "./pages/main/Main.jsx";
+import Team from "./pages/team/Team.jsx";
 import CreateTeam from "./components/CreateTeam.jsx";
 
 const RootLayout = () => (
@@ -23,7 +23,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Welcome /> },
       { path: "auth", element: <Auth /> },
-      { path: "team", element: <Main /> },
+      { path: "team", element: <Team /> },
       { path: "createteam", element: <CreateTeam /> },
     ],
   },
