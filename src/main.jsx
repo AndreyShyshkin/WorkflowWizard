@@ -7,6 +7,7 @@ import Nav from "./components/nav/Nav.jsx";
 import Welcome from "./pages/welcome/Welcome.jsx";
 import Auth from "./pages/auth/Auth.jsx";
 import Main from "./pages/main/Main.jsx";
+import CreateTeam from "./components/CreateTeam.jsx";
 
 const RootLayout = () => (
   <>
@@ -22,7 +23,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Welcome /> },
       { path: "auth", element: <Auth /> },
-      { path: "main", element: <Main /> },
+      { path: "team", element: <Main /> },
+      { path: "createteam", element: <CreateTeam /> },
     ],
   },
 ]);

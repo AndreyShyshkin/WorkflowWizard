@@ -26,7 +26,7 @@ function Welcome() {
       {user ? (
         <span>
           Вы вошли в систему как {user.displayName},
-          <Link to="/main"> войти в проект</Link>
+          <Link to="/createteam"> войти в проект</Link>
         </span>
       ) : (
         <Link to="/auth">login</Link>

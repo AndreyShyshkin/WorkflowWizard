@@ -21,7 +21,7 @@ function Auth() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUser(user);
-        navigate("/main");
+        navigate("/createteam");
       } else {
         setUser(null);
       }
@@ -53,7 +53,7 @@ function Auth() {
         return (
           updateProfile(auth.currentUser, {
             displayName: username,
-          }) && navigate("/main")
+          }) && navigate("/createteam")
         );
       })
       .catch((error) => {
@@ -68,7 +68,7 @@ function Auth() {
     let password = passwordData.current.value;
     signInWithEmailAndPassword(auth, email, password)
       .then(function () {
-        navigate("/main");
+        navigate("/createteam");
       })
       .catch((error) => {
         const errorCode = error.code;
