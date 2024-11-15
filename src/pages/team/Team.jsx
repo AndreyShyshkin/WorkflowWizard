@@ -8,6 +8,7 @@ import InviteOnTeam from "../../components/InviteOnTeam";
 function Team() {
   const [user, setUser] = useState(null);
   const [teamStatus, setTeamStatus] = useState({ exists: null, member: null });
+  const [teamUsers, setTeamUsers] = useState([]); // Список пользователей команды
   const auth = getAuth();
   const database = getDatabase();
   const urlParams = new URLSearchParams(window.location.search);
@@ -19,7 +20,7 @@ function Team() {
       if (currentUser) {
         setUser(currentUser);
         checkTeamStatus(currentUser.uid);
-        updateWorkStatus(currentUser.uid); // Обновляем статус работы
+        updateWorkStatus(currentUser.uid);
       } else {
         setUser(null);
         navigate("/auth");
@@ -33,12 +34,10 @@ function Team() {
 
   const updateWorkStatus = async (userId) => {
     try {
-      // Обновляем work: true для пользователя
       await update(ref(database, `teams/${teamName}/users/${userId}`), {
         work: true,
       });
 
-      // Сбрасываем work: false для всех других команд пользователя
       const teamsRef = ref(database, "teams");
       const snapshot = await get(teamsRef);
 
@@ -56,7 +55,6 @@ function Team() {
           }
         });
 
-        // Применяем обновления
         await update(ref(database), updates);
       }
     } catch (error) {
@@ -77,6 +75,10 @@ function Team() {
         const teamData = snapshot.val();
         const isMember = teamData.users && teamData.users[userId];
         setTeamStatus({ exists: true, member: Boolean(isMember) });
+
+        if (isMember) {
+          loadTeamUsers(); // Загружаем список пользователей
+        }
       } else {
         setTeamStatus({ exists: false, member: false });
       }
@@ -86,11 +88,28 @@ function Team() {
     }
   };
 
+  const loadTeamUsers = async () => {
+    try {
+      const teamRef = ref(database, `teams/${teamName}/users`);
+      const snapshot = await get(teamRef);
+
+      if (snapshot.exists()) {
+        const usersData = snapshot.val();
+        const usersArray = Object.entries(usersData).map(([uid, data]) => ({
+          uid,
+          ...data,
+        }));
+        setTeamUsers(usersArray); // Обновляем состояние
+      }
+    } catch (error) {
+      console.error("Error loading team users:", error);
+    }
+  };
+
   const handleChangeTeam = async () => {
     if (!user) return;
 
     try {
-      // Сбрасываем work: false для всех команд пользователя
       const teamsRef = ref(database, "teams");
       const snapshot = await get(teamsRef);
 
@@ -104,10 +123,7 @@ function Team() {
           }
         });
 
-        // Применяем обновления
         await update(ref(database), updates);
-
-        // Перенаправляем пользователя на страницу создания команды
         navigate("/createTeam");
       }
     } catch (error) {
@@ -127,12 +143,20 @@ function Team() {
         ) : (
           <div>
             <span>
-              {" "}
               {user.displayName} Добро пожаловать в команду {teamName}
             </span>
             <button onClick={handleChangeTeam}>Сменить команду</button>
             <CreateProject />
             <InviteOnTeam />
+            <h3>Состав команды:</h3>
+            <ul>
+              {teamUsers.map((teamUser) => (
+                <li key={teamUser.uid}>
+                  {teamUser.username}
+                  {teamUser.uid === user.uid && <spab>(ВЫ)</spab>}
+                </li>
+              ))}
+            </ul>
           </div>
         )
       ) : (

@@ -83,7 +83,11 @@ function Invite() {
         return;
       }
 
-      await set(userRef, { userName: user.displayName, role, access });
+      await set(userRef, {
+        userName: user.displayName,
+        role: role,
+        access: access,
+      });
       await set(inviteRef, null);
 
       alert("Invite accepted successfully!");
