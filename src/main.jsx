@@ -9,6 +9,7 @@ import Auth from "./pages/auth/Auth.jsx";
 import Team from "./pages/team/Team.jsx";
 import CreateTeam from "./components/CreateTeam.jsx";
 import Project from "./pages/project/Project.jsx";
+import Invite from "./pages/invite/Invite.jsx";
 
 const RootLayout = () => (
   <>
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: "team", element: <Team /> },
       { path: "team/project", element: <Project /> },
       { path: "createteam", element: <CreateTeam /> },
+      { path: "invite", element: <Invite /> },
     ],
   },
 ]);

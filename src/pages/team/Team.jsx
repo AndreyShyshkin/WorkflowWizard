@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getDatabase, ref, get, update } from "firebase/database";
 import CreateProject from "../../components/CreateProject";
+import InviteOnTeam from "../../components/InviteOnTeam";
 
 function Team() {
   const [user, setUser] = useState(null);
@@ -131,6 +132,7 @@ function Team() {
             </span>
             <button onClick={handleChangeTeam}>Сменить команду</button>
             <CreateProject />
+            <InviteOnTeam />
           </div>
         )
       ) : (

@@ -1,26 +1,55 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getDatabase, ref, onValue, set } from "firebase/database";
 
 function InviteOnTeam() {
   const [user, setUser] = useState(null);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("view");
+  const [access, setAccess] = useState([]);
+  const [projects, setProjects] = useState([]);
+
   const auth = getAuth();
+  const database = getDatabase();
   const urlParams = new URLSearchParams(window.location.search);
   const teamName = urlParams.get("name");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser(user);
-      } else {
-        setUser(null);
-      }
+      setUser(user || null);
     });
 
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [auth]);
 
+  // Загрузка проектов и списков
+  useEffect(() => {
+    if (!teamName) return;
+
+    const projectsRef = ref(database, `/teams/${teamName}/projects`);
+    onValue(projectsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const formattedProjects = Object.entries(data).map(
+          ([projectName, projectData]) => ({
+            id: projectName,
+            name: projectName,
+            lists: projectData.lists
+              ? Object.entries(projectData.lists).map(([listName]) => ({
+                  id: listName,
+                  name: listName,
+                }))
+              : [],
+          }),
+        );
+        setProjects(formattedProjects);
+      } else {
+        setProjects([]);
+      }
+    });
+  }, [database, teamName]);
+
+  // Генерация случайной строки
   function generateRandomString(length) {
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let result = "";
@@ -43,8 +72,12 @@ function InviteOnTeam() {
         },
         body: JSON.stringify({
           email,
-          subject: "Welcome to the Team!",
-          message: "Thank you for registering with us.",
+          subject: "Invite to the Team!",
+          message:
+            "Link to invite https://hakaton24.netlify.app/invite?name=" +
+            teamName +
+            "&key=" +
+            randomString,
         }),
       });
 
@@ -59,12 +92,150 @@ function InviteOnTeam() {
     }
   };
 
-  //sendWelcomeEmail("shyshkinandrey06@gmail.com");
+  async function submit() {
+    const inviteRef = ref(
+      database,
+      `teams/${teamName}/invites/${randomString}`,
+    );
+    try {
+      const inviteData = {
+        inviteCode: randomString,
+        role: role,
+        from: user.displayName,
+        email: email,
+      };
+
+      if (role !== "admin") {
+        inviteData.access = access;
+      }
+
+      await set(inviteRef, inviteData);
+      await sendWelcomeEmail(email);
+      console.log("Invite created successfully");
+    } catch (error) {
+      console.error("Error creating invite:", error.code, error.message);
+    }
+  }
+
+  // Обновление выбранных доступов
+  const toggleProject = (projectId) => {
+    const project = projects.find((p) => p.id === projectId);
+    const projectListsKeys = project.lists.map(
+      (list) => `${projectId}-${list.id}`,
+    );
+
+    if (projectListsKeys.every((key) => access.includes(key))) {
+      // Убираем все списки, если они уже выбраны
+      setAccess((prevAccess) =>
+        prevAccess.filter((key) => !projectListsKeys.includes(key)),
+      );
+    } else {
+      // Добавляем все списки, если хотя бы один не выбран
+      setAccess((prevAccess) => [
+        ...new Set([...prevAccess, ...projectListsKeys]),
+      ]);
+    }
+  };
+
+  const toggleList = (projectId, listId) => {
+    const key = `${projectId}-${listId}`;
+    const project = projects.find((p) => p.id === projectId);
+    const projectListsKeys = project.lists.map(
+      (list) => `${projectId}-${list.id}`,
+    );
+
+    setAccess(
+      (prevAccess) =>
+        prevAccess.includes(key)
+          ? prevAccess.filter((item) => item !== key) // Снять галочку с list
+          : [...prevAccess, key], // Поставить галочку на list
+    );
+
+    // Обновление галочки для проекта
+    const updatedAccess = access.includes(key)
+      ? access.filter((item) => item !== key)
+      : [...access, key];
+
+    if (projectListsKeys.every((listKey) => updatedAccess.includes(listKey))) {
+      // Если все lists выбраны, ставим галочку на проект
+      setAccess((prevAccess) => [
+        ...new Set([...prevAccess, ...projectListsKeys]),
+      ]);
+    }
+  };
+
   return (
     <div className="invite-on-team">
-      <input placeholder="Email" />
-      <div>access</div>
-      <button>Пригласить в команду</button>
+      <input
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <div className="radio">
+        <label>
+          <input
+            type="radio"
+            value="view"
+            checked={role === "view"}
+            onChange={() => setRole("view")}
+          />
+          View
+        </label>
+      </div>
+      <div className="radio">
+        <label>
+          <input
+            type="radio"
+            value="edit"
+            checked={role === "edit"}
+            onChange={() => setRole("edit")}
+          />
+          Edit
+        </label>
+      </div>
+      <div className="radio">
+        <label>
+          <input
+            type="radio"
+            value="admin"
+            checked={role === "admin"}
+            onChange={() => setRole("admin")}
+          />
+          Admin
+        </label>
+      </div>
+
+      {role !== "admin" && (
+        <div>
+          {projects.map((project) => (
+            <div key={project.id}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={project.lists.every((list) =>
+                    access.includes(`${project.id}-${list.id}`),
+                  )}
+                  onChange={() => toggleProject(project.id)}
+                />
+                {project.name}
+              </label>
+              <div style={{ marginLeft: "20px" }}>
+                {project.lists.map((list) => (
+                  <label key={list.id}>
+                    <input
+                      type="checkbox"
+                      checked={access.includes(`${project.id}-${list.id}`)}
+                      onChange={() => toggleList(project.id, list.id)}
+                    />
+                    {list.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={submit}>Пригласить в команду</button>
     </div>
   );
 }
