@@ -5,13 +5,32 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   updateProfile,
+  onAuthStateChanged,
 } from "firebase/auth";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
 
 function Auth() {
   const [isRegistrationSelected, setIsRegistrationSelected] = useState(true);
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUser(user);
+        navigate("/main");
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [auth, navigate]);
 
   const handleRadioChange = (e) => {
     setIsRegistrationSelected(e.target.value === "registration");
@@ -31,9 +50,11 @@ function Auth() {
     let password = passwordData.current.value;
     createUserWithEmailAndPassword(auth, email, password)
       .then(function () {
-        return updateProfile(auth.currentUser, {
-          displayName: username,
-        });
+        return (
+          updateProfile(auth.currentUser, {
+            displayName: username,
+          }) && navigate("/main")
+        );
       })
       .catch((error) => {
         const errorCode = error.code;
@@ -45,12 +66,16 @@ function Auth() {
   const loginUser = () => {
     let email = loginData.current.value;
     let password = passwordData.current.value;
-    signInWithEmailAndPassword(auth, email, password).catch((error) => {
-      const errorCode = error.code;
-      const errorMessage = error.message;
-      console.log("🚀 ~ loginUser ~ errorCode:", errorCode);
-      console.log("🚀 ~ loginUser ~ errorMessage:", errorMessage);
-    });
+    signInWithEmailAndPassword(auth, email, password)
+      .then(function () {
+        navigate("/main");
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        console.log("🚀 ~ loginUser ~ errorCode:", errorCode);
+        console.log("🚀 ~ loginUser ~ errorMessage:", errorMessage);
+      });
   };
 
   return (
