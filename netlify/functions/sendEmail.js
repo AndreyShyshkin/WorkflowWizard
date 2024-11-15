@@ -14,14 +14,14 @@ export const handler = async (event, context) => {
   const transporter = nodemailer.createTransport({
     service: "gmail", // Используйте свой почтовый сервис
     auth: {
-      user: import.meta.env.VITE_EMAIL, // Ваш email
-      pass: import.meta.env.VITE_EMAIL_PASSWORD, // Ваш пароль или App Password
+      user: process.env.VITE_EMAIL, // Ваш email
+      pass: process.env.VITE_EMAIL_PASSWORD, // Ваш пароль или App Password
     },
   });
 
   try {
     await transporter.sendMail({
-      from: import.meta.env.VITE_EMAIL,
+      from: process.env.VITE_EMAIL,
       to: email,
       subject: subject,
       text: message,
