@@ -11,6 +11,31 @@ function CreateTeam() {
   const auth = getAuth();
   const database = getDatabase();
 
+  const sendWelcomeEmail = async (email) => {
+    try {
+      const response = await fetch("/.netlify/functions/sendEmail", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          subject: "Welcome to the Team!",
+          message: "Thank you for registering with us.",
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log("Email sent successfully:", data.message);
+      } else {
+        console.error("Error sending email:", data.error);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
   useEffect(() => {
     onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -73,6 +98,7 @@ function CreateTeam() {
       await set(ref(database, "teams/" + trimmedName + "/users/" + user.uid), {
         username: user.displayName,
       });
+      sendWelcomeEmail("shyshkinandrey06@gmail.com");
       navigate("/team?name=" + trimmedName);
     } catch (error) {
       console.error("Error creating team:", error.code, error.message);

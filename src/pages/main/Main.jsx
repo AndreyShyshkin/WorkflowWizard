@@ -124,7 +124,10 @@ function Main() {
           <span>Вы не состоите в этой команде</span>
         ) : (
           <div>
-            <span>Добро пожаловать в команду {teamName}</span>
+            <span>
+              {" "}
+              {user.displayName} Добро пожаловать в команду {teamName}
+            </span>
             <button onClick={handleChangeTeam}>Сменить команду</button>
           </div>
         )
