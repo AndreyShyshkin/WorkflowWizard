@@ -8,6 +8,7 @@ import Welcome from "./pages/welcome/Welcome.jsx";
 import Auth from "./pages/auth/Auth.jsx";
 import Team from "./pages/team/Team.jsx";
 import CreateTeam from "./components/CreateTeam.jsx";
+import Project from "./pages/project/Project.jsx";
 
 const RootLayout = () => (
   <>
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
       { index: true, element: <Welcome /> },
       { path: "auth", element: <Auth /> },
       { path: "team", element: <Team /> },
+      { path: "team/project", element: <Project /> },
       { path: "createteam", element: <CreateTeam /> },
     ],
   },

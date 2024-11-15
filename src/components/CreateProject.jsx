@@ -50,20 +50,28 @@ function CreateProject() {
       return;
     }
 
-    const teamRef = ref(database, "teams/" + trimmedName);
+    const projectRef = ref(
+      database,
+      "teams/" + teamName + "/projects/" + trimmedName,
+    );
     try {
-      const snapshot = await get(teamRef);
+      const snapshot = await get(projectRef);
       if (snapshot.exists()) {
-        console.log("Team name already exists");
+        console.log("Project name already exists");
         return;
       }
       await set(
         ref(
           database,
-          "teams/" + teamName + "/projects/" + trimmedName + "/users/",
+          "teams/" +
+            teamName +
+            "/projects/" +
+            trimmedName +
+            "/users/" +
+            user.uid,
         ),
         {
-          userid: user.uid,
+          userName: user.displayName,
         },
       );
       navigate(
