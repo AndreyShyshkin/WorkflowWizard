@@ -6,16 +6,19 @@ import {
   signInWithPopup,
   updateProfile,
   onAuthStateChanged,
+  sendPasswordResetEmail, // Импортируем метод для сброса пароля
 } from "firebase/auth";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
 
 function Auth() {
   const [isRegistrationSelected, setIsRegistrationSelected] = useState(true);
-  const navigate = useNavigate();
+  const [resetEmail, setResetEmail] = useState(""); // Для хранения email для сброса
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -57,12 +60,10 @@ function Auth() {
         );
       })
       .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        console.log("🚀 ~ loginUser ~ errorCode:", errorCode);
-        console.log("🚀 ~ loginUser ~ errorMessage:", errorMessage);
+        console.error("Error during registration:", error.message);
       });
   };
+
   const loginUser = () => {
     let email = loginData.current.value;
     let password = passwordData.current.value;
@@ -71,16 +72,27 @@ function Auth() {
         navigate("/createteam");
       })
       .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        console.log("🚀 ~ loginUser ~ errorCode:", errorCode);
-        console.log("🚀 ~ loginUser ~ errorMessage:", errorMessage);
+        console.error("Error during login:", error.message);
+      });
+  };
+
+  const forgetPassword = () => {
+    if (!resetEmail) {
+      alert("Please enter your email to reset your password.");
+      return;
+    }
+    sendPasswordResetEmail(auth, resetEmail)
+      .then(() => {
+        alert("Password reset email sent. Please check your inbox.");
+      })
+      .catch((error) => {
+        console.error("Error during password reset:", error.message);
       });
   };
 
   return (
     <div id="login">
-      SingIn
+      <h1>Sign In</h1>
       <div>
         <span>Username</span>
         <input
@@ -99,13 +111,13 @@ function Auth() {
           style={{ display: isRegistrationSelected ? "block" : "none" }}
         />
         <button
-          onClick={() => registerUser()}
+          onClick={registerUser}
           style={{ display: isRegistrationSelected ? "block" : "none" }}
         >
-          reg
+          Register
         </button>
         <button
-          onClick={() => loginUser()}
+          onClick={loginUser}
           style={{ display: isRegistrationSelected ? "none" : "block" }}
         >
           Login
@@ -134,8 +146,18 @@ function Auth() {
         </div>
       </div>
       <button onClick={() => signInWithPopup(auth, provider)}>
-        Войти с помощью Google
+        Sign in with Google
       </button>
+      <div>
+        <h2>Forgot Password?</h2>
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={resetEmail}
+          onChange={(e) => setResetEmail(e.target.value)}
+        />
+        <button onClick={forgetPassword}>Reset Password</button>
+      </div>
     </div>
   );
 }
