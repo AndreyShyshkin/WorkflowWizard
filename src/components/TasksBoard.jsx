@@ -6,6 +6,10 @@ function TasksBoard() {
 			<h3>Tasks Board</h3>
 			<div className='flex'>
 				<div>
+					<h2>Overdue</h2>
+					<CreateTask date='Overdue' />
+				</div>
+				<div>
 					<h2>Today</h2>
 					<CreateTask date='Today' />
 				</div>
@@ -18,7 +22,7 @@ function TasksBoard() {
 					<CreateTask date='On this week' />
 				</div>
 				<div>
-					<h2>On next weeek</h2>
+					<h2>On next week</h2>
 					<CreateTask date='On next week' />
 				</div>
 				<div>
