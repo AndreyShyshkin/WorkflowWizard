@@ -19,6 +19,7 @@ function CreateTask({ date }) {
 	const [userTasks, setUserTasks] = useState([])
 	const [showPriority, setShowPriority] = useState(false)
 	const [selectedPriority, setSelectedPriority] = useState('low')
+	const [draggingTask, setDraggingTask] = useState(null)
 	const auth = getAuth()
 	const database = getDatabase()
 	const navigate = useNavigate()
@@ -27,11 +28,7 @@ function CreateTask({ date }) {
 	const projectName = urlParams.get('projectname')
 
 	const priorities = [
-		{
-			value: 'low',
-			label: 'Low',
-			color: 'bg-green-100 text-green-800',
-		},
+		{ value: 'low', label: 'Low', color: 'bg-green-100 text-green-800' },
 		{
 			value: 'medium',
 			label: 'Medium',
@@ -103,21 +100,26 @@ function CreateTask({ date }) {
 				`teams/${teamName}/projects/${projectName}/tasks/${date}/${taskId}`
 			)
 
+			// Remove the task from the database
 			await remove(taskRef)
 
+			// Filter out the task from the userTasks state
 			const remainingTasks = userTasks.filter(task => task.id !== taskId)
 			const updates = {}
 
+			// Update the order of remaining tasks
 			remainingTasks.forEach((task, index) => {
 				updates[
 					`teams/${teamName}/projects/${projectName}/tasks/${date}/${task.id}/order`
 				] = index
 			})
 
+			// Update the database with the new task order
 			if (Object.keys(updates).length > 0) {
 				await update(ref(database), updates)
 			}
 
+			// Re-fetch tasks to reflect the deletion
 			fetchUserTasks()
 		} catch (error) {
 			console.error('Error deleting task:', error)
@@ -164,11 +166,13 @@ function CreateTask({ date }) {
 
 				const batch = {}
 				updatedTasks.forEach((task, index) => {
+					// Ensure sections are correctly updated
 					batch[
 						`teams/${teamName}/projects/${projectName}/tasks/${targetCategory}/${task.id}`
 					] = {
 						...task,
 						order: index,
+						sections: task.sections || [], // Ensure sections are set to an empty array if none
 					}
 				})
 
@@ -176,19 +180,23 @@ function CreateTask({ date }) {
 			} else {
 				const batch = {}
 
+				// Remove task from the source category
 				batch[
 					`teams/${teamName}/projects/${projectName}/tasks/${sourceCategory}/${payload.id}`
 				] = null
 
+				// Add task to the target category
 				const targetTasks = [...userTasks]
 				targetTasks.splice(addedIndex, 0, {
 					id: payload.id,
 					priority: payload.priority,
 					createdAt: payload.createdAt,
 					createdBy: payload.createdBy,
+					sections: payload.sections || [], // Ensure sections are correctly added
 					order: addedIndex,
 				})
 
+				// Update all tasks in the target category
 				targetTasks.forEach((task, index) => {
 					batch[
 						`teams/${teamName}/projects/${projectName}/tasks/${targetCategory}/${task.id}`
@@ -196,6 +204,7 @@ function CreateTask({ date }) {
 						priority: task.priority,
 						createdAt: task.createdAt,
 						createdBy: task.createdBy,
+						sections: task.sections || [], // Ensure sections are correctly added
 						order: index,
 					}
 				})
@@ -203,6 +212,7 @@ function CreateTask({ date }) {
 				await update(ref(database), batch)
 			}
 
+			// Re-fetch tasks to reflect the changes
 			fetchUserTasks()
 		} catch (error) {
 			console.error('Error handling drop:', error)
@@ -221,6 +231,23 @@ function CreateTask({ date }) {
 			default:
 				return ''
 		}
+	}
+
+	const handleTaskClick = taskId => {
+		// Navigate to the task's detailed page
+		navigate(
+			`/team/project/task?teamname=${teamName}&projectname=${projectName}&deadline=${date}&taskname=${taskId}`
+		)
+	}
+
+	const handleLongPressStart = task => {
+		// Start a timeout to detect long press
+		setDraggingTask(task)
+	}
+
+	const handleLongPressEnd = () => {
+		// Clear the dragging task when long press ends
+		setDraggingTask(null)
 	}
 
 	return (
@@ -242,13 +269,15 @@ function CreateTask({ date }) {
 							className={`p-2 mb-2 border rounded shadow-sm ${getPriorityColor(
 								task.priority
 							)} relative group cursor-grab active:cursor-grabbing transition-colors`}
+							onClick={() => handleTaskClick(task.id)} // Handle task click
+							onMouseDown={() => handleLongPressStart(task)} // Detect long press start
+							onMouseUp={handleLongPressEnd} // Detect long press end
+							onMouseLeave={handleLongPressEnd} // Handle if mouse leaves
 						>
 							<div className='flex justify-between items-start'>
-								{/* GripVertical в правом верхнем углу */}
 								<div className='absolute right-2 top-2 opacity-0 group-hover:opacity-50'>
 									<GripVertical className='h-5 w-5' />
 								</div>
-								{/* Информация о задаче */}
 								<div className='flex-1 pr-10'>
 									<h5 className='m-0 font-medium'>{task.id}</h5>
 									<div className='text-xs text-gray-500'>
@@ -259,7 +288,6 @@ function CreateTask({ date }) {
 									</div>
 								</div>
 							</div>
-							{/* Кнопка удаления внизу */}
 							<div className='absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
 								<button
 									onClick={e => {

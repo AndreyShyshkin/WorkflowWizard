@@ -79,6 +79,7 @@ function Project() {
 							<div>
 								<p>Statistics</p>
 								<p>Tasks</p>
+								<p>Members:</p>
 							</div>
 						</div>
 						<div>
