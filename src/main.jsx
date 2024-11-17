@@ -23,7 +23,7 @@ const RootLayout = () => (
 const router = createBrowserRouter([
 	{
 		path: '/',
-		element: <RootLayout />, // используем RootLayout, чтобы включить Nav и Outlet
+		element: <RootLayout />,
 		children: [
 			{ index: true, element: <Welcome /> },
 			{ path: 'auth', element: <Auth /> },

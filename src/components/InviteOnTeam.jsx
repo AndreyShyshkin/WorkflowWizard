@@ -1,6 +1,6 @@
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { get, getDatabase, onValue, ref, set } from 'firebase/database'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 function InviteOnTeam() {
 	const [user, setUser] = useState(null)
@@ -41,7 +41,6 @@ function InviteOnTeam() {
 		})
 	}, [database, teamName])
 
-	// Валидация email
 	const validateEmail = email => {
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 		if (!email) {
@@ -56,21 +55,19 @@ function InviteOnTeam() {
 		return true
 	}
 
-	// Проверка существующих приглашений
 	const checkExistingInvites = async email => {
 		const invitesRef = ref(database, `teams/${teamName}/invites`)
 		const snapshot = await get(invitesRef)
 		const invites = snapshot.val()
 
 		if (invites) {
-			// Проверяем все приглашения
 			for (const invite of Object.values(invites)) {
 				if (invite.email.toLowerCase() === email.toLowerCase()) {
-					return true // Приглашение уже существует
+					return true
 				}
 			}
 		}
-		return false // Приглашение не найдено
+		return false
 	}
 
 	function generateRandomString(length) {
@@ -111,13 +108,11 @@ function InviteOnTeam() {
 		try {
 			setIsLoading(true)
 
-			// Валидация email
 			if (!validateEmail(email)) {
 				setIsLoading(false)
 				return
 			}
 
-			// Проверка существующих приглашений
 			const inviteExists = await checkExistingInvites(email)
 			if (inviteExists) {
 				setEmailError('An invite has already been sent to this email')
@@ -132,15 +127,14 @@ function InviteOnTeam() {
 				inviteCode,
 				role,
 				from: user?.displayName || 'Unknown',
-				email: email.toLowerCase(), // Сохраняем email в нижнем регистре
+				email: email.toLowerCase(),
 				access: role === 'admin' ? 'all' : access,
-				createdAt: new Date().toISOString(), // Добавляем дату создания
+				createdAt: new Date().toISOString(),
 			}
 
 			await set(inviteRef, inviteData)
 			await sendWelcomeEmail(email, inviteCode)
 
-			// Очистка формы после успешной отправки
 			setEmail('')
 			setAccess([])
 			setRole('view')
@@ -165,11 +159,9 @@ function InviteOnTeam() {
 		})
 	}
 
-	// Обработчик изменения email с валидацией
 	const handleEmailChange = e => {
 		const newEmail = e.target.value
 		setEmail(newEmail)
-		// Очищаем ошибку при вводе
 		if (emailError) {
 			setEmailError('')
 		}
@@ -240,7 +232,7 @@ function InviteOnTeam() {
 					!email || (role !== 'admin' && access.length === 0) || isLoading
 				}
 			>
-				{isLoading ? 'Sending...' : 'Пригласить в команду'}
+				{isLoading ? 'Sending...' : 'Invite to join the team'}
 			</button>
 		</div>
 	)

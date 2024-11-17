@@ -16,7 +16,7 @@ const provider = new GoogleAuthProvider()
 
 function Auth() {
 	const [isRegistrationSelected, setIsRegistrationSelected] = useState(true)
-	const [resetEmail, setResetEmail] = useState('') // Для хранения email для сброса
+	const [resetEmail, setResetEmail] = useState('')
 	const [user, setUser] = useState(null)
 	const navigate = useNavigate()
 

@@ -1,7 +1,7 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import { get, getDatabase, ref, update } from 'firebase/database'
+import { get, getDatabase, onValue, ref, update } from 'firebase/database'
 import { Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -19,10 +19,9 @@ function Nav() {
 	const teamName = urlParams.get('teamname')
 	const projectName = urlParams.get('projectname')
 
-	const fetchUserTeams = async userId => {
+	const fetchUserTeams = userId => {
 		const teamsRef = ref(database, 'teams')
-		try {
-			const snapshot = await get(teamsRef)
+		const unsubscribe = onValue(teamsRef, snapshot => {
 			if (snapshot.exists()) {
 				const teams = snapshot.val()
 				const userTeamsList = []
@@ -33,48 +32,59 @@ function Nav() {
 						userTeamsList.push(teamName)
 						if (teams[teamName].users[userId].work === true && !redirected) {
 							navigate(`/team?teamname=${teamName}`)
-							redirected = true // Переадресуем только один раз
+							redirected = true
 						}
 					}
 				})
 
-				setUserTeams(userTeamsList) // Update user teams
+				setUserTeams(userTeamsList)
+			} else {
+				setUserTeams([])
 			}
-		} catch (error) {
-			console.error('Error fetching teams:', error)
-		}
+		})
+
+		return unsubscribe
 	}
 
-	const fetchUserProjects = async () => {
-		try {
-			const projectsRef = ref(database, `teams/${teamName}/projects`)
-			const snapshot = await get(projectsRef)
+	const fetchUserProjects = teamName => {
+		const projectsRef = ref(database, `teams/${teamName}/projects`)
+		const unsubscribe = onValue(projectsRef, snapshot => {
 			if (snapshot.exists()) {
 				const projects = Object.keys(snapshot.val() || {})
 				setUserProjects(projects)
 			} else {
-				setUserProjects([]) // Если проектов нет, очищаем массив
+				setUserProjects([])
 			}
-		} catch (error) {
-			console.error('Error fetching user projects:', error.code, error.message)
-		}
+		})
+
+		return unsubscribe
 	}
 
 	useEffect(() => {
-		const unsubscribe = onAuthStateChanged(auth, user => {
+		let unsubscribeTeams
+		let unsubscribeProjects
+
+		const unsubscribeAuth = onAuthStateChanged(auth, user => {
 			if (user) {
 				setUser(user)
-				fetchUserTeams(user.uid)
-				fetchUserProjects(user.uid)
+				unsubscribeTeams = fetchUserTeams(user.uid)
+
+				if (teamName) {
+					unsubscribeProjects = fetchUserProjects(teamName)
+				}
 			} else {
 				setUser(null)
+				setUserTeams([])
+				setUserProjects([])
 			}
 		})
 
 		return () => {
-			unsubscribe()
+			unsubscribeAuth()
+			if (unsubscribeTeams) unsubscribeTeams()
+			if (unsubscribeProjects) unsubscribeProjects()
 		}
-	}, [auth])
+	}, [auth, teamName])
 
 	const handleChangeTeam = async () => {
 		if (!user) return

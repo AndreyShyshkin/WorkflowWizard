@@ -16,7 +16,7 @@ import {
 	Trash2,
 	X,
 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Container, Draggable } from 'react-smooth-dnd'
 import Timer from '../../components/Timer'
@@ -170,7 +170,6 @@ function Task() {
 			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections`
 		)
 
-		// Находим максимальный порядковый номер среди существующих секций
 		const maxOrder = sections.reduce(
 			(max, section) => Math.max(max, section.order || 0),
 			-1
@@ -179,7 +178,7 @@ function Task() {
 		let newSection = {
 			type,
 			content: '',
-			order: maxOrder + 1, // Добавляем новую секцию в конец
+			order: maxOrder + 1,
 		}
 
 		if (type === 'table') {
@@ -246,7 +245,6 @@ function Task() {
 
 		return (
 			<div className='relative overflow-x-auto'>
-				{/* Column control buttons */}
 				<div className='flex mb-2'>
 					{section.tableData[0].map((_, colIndex) => (
 						<button
@@ -268,7 +266,6 @@ function Task() {
 				</div>
 
 				<div className='flex'>
-					{/* Row control buttons */}
 					<div className='flex flex-col mr-2'>
 						{section.tableData.map((_, rowIndex) => (
 							<button
@@ -289,7 +286,6 @@ function Task() {
 						</button>
 					</div>
 
-					{/* Table content */}
 					<table className='border-collapse border border-gray-300'>
 						<tbody>
 							{section.tableData.map((row, rowIndex) => (
@@ -395,22 +391,18 @@ function Task() {
 		const handleTodoDrop = ({ removedIndex, addedIndex }) => {
 			setIsDraggingTodo(true)
 
-			// Получаем отсортированный массив todo элементов
 			const todosArray = Object.entries(section.todos || {}).sort(
 				(a, b) => (a[1].order || 0) - (b[1].order || 0)
 			)
 
-			// Если индексы равны или невалидны, ничего не делаем
 			if (removedIndex === addedIndex || removedIndex < 0 || addedIndex < 0) {
 				setIsDraggingTodo(false)
 				return
 			}
 
-			// Перемещаем элемент
 			const [movedTodo] = todosArray.splice(removedIndex, 1)
 			todosArray.splice(addedIndex, 0, movedTodo)
 
-			// Обновляем порядковые номера для всех элементов
 			const updatedTodos = {}
 			todosArray.forEach(([id, todo], index) => {
 				updatedTodos[id] = {
@@ -419,7 +411,6 @@ function Task() {
 				}
 			})
 
-			// Обновляем Firebase
 			const sectionRef = ref(
 				database,
 				`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${section.id}`
@@ -435,7 +426,6 @@ function Task() {
 				})
 		}
 
-		// Отсортированные todo элементы для отображения
 		const sortedTodos = Object.entries(section.todos || {}).sort(
 			(a, b) => (a[1].order || 0) - (b[1].order || 0)
 		)
@@ -552,7 +542,6 @@ function Task() {
 				</Container>
 
 				{sections.length === 0 ? (
-					// Показываем сообщение и кнопки, если нет секций
 					<div className='text-left py-8'>
 						<p className='text-gray-500 mb-4'>
 							No sections yet. Create your first section:
@@ -582,7 +571,6 @@ function Task() {
 						</div>
 					</div>
 				) : (
-					// Показываем обычные кнопки добавления, если есть секции
 					<div className='flex gap-2 mb-4'>
 						<button
 							onClick={() => handleAddSection('text')}

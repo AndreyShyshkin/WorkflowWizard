@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react'
 
 const Timer = () => {
-	const [time, setTime] = useState(0) // Время в секундах
+	const [time, setTime] = useState(0)
 	const [inputTime, setInputTime] = useState('')
 	const [isRunning, setIsRunning] = useState(false)
 
-	const presetTimes = [300, 600, 900] // 5, 10, 15 минут в секундах
+	const presetTimes = [300, 600, 900]
 
-	// Таймер
 	useEffect(() => {
 		if (!isRunning || time <= 0) return
 

@@ -95,14 +95,12 @@ function CreateTask({ date }) {
 
 	const handleDeleteTask = async taskId => {
 		try {
-			// Удаляем задачу целиком - это автоматически удалит все дочерние узлы, включая sections
 			const taskRef = ref(
 				database,
 				`teams/${teamName}/projects/${projectName}/tasks/${date}/${taskId}`
 			)
 			await remove(taskRef)
 
-			// Пересчитать порядок оставшихся задач
 			const remainingTasks = userTasks.filter(task => task.id !== taskId)
 
 			if (remainingTasks.length > 0) {
@@ -116,7 +114,6 @@ function CreateTask({ date }) {
 				await update(ref(database), updates)
 			}
 
-			// Обновить состояние задач
 			fetchUserTasks()
 		} catch (error) {
 			console.error('Error deleting task:', error)
@@ -163,13 +160,12 @@ function CreateTask({ date }) {
 
 				const batch = {}
 				updatedTasks.forEach((task, index) => {
-					// Ensure sections are correctly updated
 					batch[
 						`teams/${teamName}/projects/${projectName}/tasks/${targetCategory}/${task.id}`
 					] = {
 						...task,
 						order: index,
-						sections: task.sections || [], // Ensure sections are set to an empty array if none
+						sections: task.sections || [],
 					}
 				})
 
@@ -177,23 +173,20 @@ function CreateTask({ date }) {
 			} else {
 				const batch = {}
 
-				// Remove task from the source category
 				batch[
 					`teams/${teamName}/projects/${projectName}/tasks/${sourceCategory}/${payload.id}`
 				] = null
 
-				// Add task to the target category
 				const targetTasks = [...userTasks]
 				targetTasks.splice(addedIndex, 0, {
 					id: payload.id,
 					priority: payload.priority,
 					createdAt: payload.createdAt,
 					createdBy: payload.createdBy,
-					sections: payload.sections || [], // Ensure sections are correctly added
+					sections: payload.sections || [],
 					order: addedIndex,
 				})
 
-				// Update all tasks in the target category
 				targetTasks.forEach((task, index) => {
 					batch[
 						`teams/${teamName}/projects/${projectName}/tasks/${targetCategory}/${task.id}`
@@ -201,7 +194,7 @@ function CreateTask({ date }) {
 						priority: task.priority,
 						createdAt: task.createdAt,
 						createdBy: task.createdBy,
-						sections: task.sections || [], // Ensure sections are correctly added
+						sections: task.sections || [],
 						order: index,
 					}
 				})
@@ -209,7 +202,6 @@ function CreateTask({ date }) {
 				await update(ref(database), batch)
 			}
 
-			// Re-fetch tasks to reflect the changes
 			fetchUserTasks()
 		} catch (error) {
 			console.error('Error handling drop:', error)
@@ -231,19 +223,16 @@ function CreateTask({ date }) {
 	}
 
 	const handleTaskClick = (taskId, taskPriority) => {
-		// Navigate to the task's detailed page
 		navigate(
 			`/team/project/task?teamname=${teamName}&projectname=${projectName}&deadline=${date}&taskname=${taskId}&priority=${taskPriority}`
 		)
 	}
 
 	const handleLongPressStart = task => {
-		// Start a timeout to detect long press
 		setDraggingTask(task)
 	}
 
 	const handleLongPressEnd = () => {
-		// Clear the dragging task when long press ends
 		setDraggingTask(null)
 	}
 
@@ -266,10 +255,10 @@ function CreateTask({ date }) {
 							className={`p-2 mb-2 border rounded shadow-sm ${getPriorityColor(
 								task.priority
 							)} relative group cursor-grab active:cursor-grabbing transition-colors`}
-							onClick={() => handleTaskClick(task.id, task.priority)} // Handle task click
-							onMouseDown={() => handleLongPressStart(task)} // Detect long press start
-							onMouseUp={handleLongPressEnd} // Detect long press end
-							onMouseLeave={handleLongPressEnd} // Handle if mouse leaves
+							onClick={() => handleTaskClick(task.id, task.priority)}
+							onMouseDown={() => handleLongPressStart(task)}
+							onMouseUp={handleLongPressEnd}
+							onMouseLeave={handleLongPressEnd}
 						>
 							<div className='flex justify-between items-start'>
 								<div className='absolute right-2 top-2 opacity-0 group-hover:opacity-50'>
@@ -288,8 +277,8 @@ function CreateTask({ date }) {
 							<div className='absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
 								<button
 									onClick={e => {
-										e.preventDefault() // Останавливает стандартное поведение
-										e.stopPropagation() // Останавливает всплытие события
+										e.preventDefault()
+										e.stopPropagation()
 										handleDeleteTask(task.id)
 									}}
 									className='p-1 hover:bg-red-50 rounded'

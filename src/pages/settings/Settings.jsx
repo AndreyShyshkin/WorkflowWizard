@@ -48,7 +48,6 @@ function Settings() {
 			await updateEmail(auth.currentUser, newEmail)
 			alert('Email updated successfully!')
 
-			// Отправляем письмо для подтверждения
 			await auth.currentUser.sendEmailVerification()
 			alert(`Verification email sent to ${newEmail}. Please verify your email.`)
 		} catch (error) {

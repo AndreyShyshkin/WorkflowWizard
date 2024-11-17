@@ -61,7 +61,6 @@ function Project() {
 				const usersData = snapshot.val()
 				const usersArray = await Promise.all(
 					Object.entries(usersData).map(async ([userId, userData]) => {
-						// Получаем данные пользователя из /users/{userId}
 						const userAuthData = await getUserData(userId)
 
 						if (userData.role === 'admin') {
@@ -91,7 +90,6 @@ function Project() {
 						return null
 					})
 				)
-				// Фильтруем null значения и сортируем пользователей
 				setTeamUsers(usersArray.filter(user => user !== null))
 			}
 		} catch (error) {
@@ -104,21 +102,51 @@ function Project() {
 			setProjectStatus({ exists: false, member: false })
 			return
 		}
-		const projectRef = ref(
-			database,
-			`teams/${teamName}/projects/${projectName}/`
-		)
+
 		try {
-			const snapshot = await get(projectRef)
-			if (snapshot.exists()) {
-				const teamData = snapshot.val()
-				const isMember = teamData.users && teamData.users[userId]
-				setProjectStatus({ exists: true, member: Boolean(isMember) })
-			} else {
+			const projectRef = ref(
+				database,
+				`teams/${teamName}/projects/${projectName}/`
+			)
+			const projectSnapshot = await get(projectRef)
+
+			if (!projectSnapshot.exists()) {
 				setProjectStatus({ exists: false, member: false })
+				return
 			}
+
+			const userRef = ref(database, `teams/${teamName}/users/${userId}`)
+			const userSnapshot = await get(userRef)
+
+			if (!userSnapshot.exists()) {
+				setProjectStatus({ exists: true, member: false })
+				return
+			}
+
+			const userData = userSnapshot.val()
+
+			if (userData.role === 'admin') {
+				setProjectStatus({ exists: true, member: true })
+				return
+			}
+
+			const accessRef = ref(
+				database,
+				`teams/${teamName}/users/${userId}/access`
+			)
+			const accessSnapshot = await get(accessRef)
+
+			if (accessSnapshot.exists()) {
+				const accessData = accessSnapshot.val()
+				if (Array.isArray(accessData) && accessData.includes(projectName)) {
+					setProjectStatus({ exists: true, member: true })
+					return
+				}
+			}
+
+			setProjectStatus({ exists: true, member: false })
 		} catch (error) {
-			console.error('Error checking team status:', error)
+			console.error('Error checking project status:', error)
 			setProjectStatus({ exists: null, member: null })
 		}
 	}
@@ -150,9 +178,19 @@ function Project() {
 				projectStatus.exists === null ? (
 					<span>Loading...</span>
 				) : projectStatus.exists === false ? (
-					<span>Проекта не существует</span>
+					<>
+						<Link to={`/team?teamname=${teamName}`} className='text-gray-500'>
+							Go bake
+						</Link>
+						<p>The project does not exist</p>
+					</>
 				) : projectStatus.member === false ? (
-					<span>Вы не состоите в этом проекте</span>
+					<>
+						<Link to={`/team?teamname=${teamName}`} className='text-gray-500'>
+							Go bake
+						</Link>
+						<p>You are not a member of this project</p>
+					</>
 				) : (
 					<>
 						<div className='flex mb-6'>
@@ -220,7 +258,7 @@ function Project() {
 					</>
 				)
 			) : (
-				<span>Переадресация...</span>
+				<span>Redirection...</span>
 			)}
 		</div>
 	)

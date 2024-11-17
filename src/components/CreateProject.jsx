@@ -11,7 +11,6 @@ function CreateProject() {
 	const database = getDatabase()
 	const urlParams = new URLSearchParams(window.location.search)
 	const teamName = urlParams.get('teamname')
-	const projectname = urlParams.get('projectname')
 
 	useEffect(() => {
 		const unsubscribe = onAuthStateChanged(auth, currentUser => {
@@ -49,7 +48,6 @@ function CreateProject() {
 				console.log('Project name already exists')
 				return
 			}
-			// Создаем проект и добавляем текущего пользователя как участника
 			await set(
 				ref(
 					database,
@@ -59,7 +57,7 @@ function CreateProject() {
 					userName: user.displayName,
 				}
 			)
-			// Обновляем список проектов после создания
+
 			navigate(`/team/project?teamname=${teamName}&projectname=${trimmedName}`)
 		} catch (error) {
 			console.error('Error creating project:', error.code, error.message)

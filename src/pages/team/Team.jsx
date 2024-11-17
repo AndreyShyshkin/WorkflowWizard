@@ -8,9 +8,9 @@ import InviteOnTeam from '../../components/InviteOnTeam'
 function Team() {
 	const [user, setUser] = useState(null)
 	const [teamStatus, setTeamStatus] = useState({ exists: null, member: null })
-	const [teamUsers, setTeamUsers] = useState([]) // Список пользователей команды
+	const [teamUsers, setTeamUsers] = useState([])
 	const [userProjects, setUserProjects] = useState([])
-	const [userRole, setUserRole] = useState(null) // Роль пользователя
+	const [userRole, setUserRole] = useState(null)
 	const auth = getAuth()
 	const database = getDatabase()
 	const urlParams = new URLSearchParams(window.location.search)
@@ -43,7 +43,7 @@ function Team() {
 				const projects = Object.keys(snapshot.val() || {})
 				setUserProjects(projects)
 			} else {
-				setUserProjects([]) // Если проектов нет, очищаем массив
+				setUserProjects([])
 			}
 		} catch (error) {
 			console.error('Error fetching user projects:', error.code, error.message)
@@ -95,8 +95,8 @@ function Team() {
 				setTeamStatus({ exists: true, member: Boolean(isMember) })
 
 				if (isMember) {
-					setUserRole(teamData.users[userId]?.role || 'view') // Получение роли пользователя
-					loadTeamUsers() // Загружаем список пользователей
+					setUserRole(teamData.users[userId]?.role || 'view')
+					loadTeamUsers()
 				}
 			} else {
 				setTeamStatus({ exists: false, member: false })
@@ -118,7 +118,7 @@ function Team() {
 					uid,
 					...data,
 				}))
-				setTeamUsers(usersArray) // Обновляем состояние
+				setTeamUsers(usersArray)
 			}
 		} catch (error) {
 			console.error('Error loading team users:', error)
@@ -153,9 +153,9 @@ function Team() {
 
 	const handleLogoutTeam = async () => {
 		const confirmLogout = window.confirm(
-			'Вы уверены, что хотите выйти из команды?'
+			'Are you sure you want to quit the team?'
 		)
-		if (!confirmLogout) return // Если пользователь нажал "Отмена", выходим из функции
+		if (!confirmLogout) return
 
 		try {
 			const teamUsersRef = ref(database, `teams/${teamName}/users`)
@@ -180,10 +180,10 @@ function Team() {
 
 				navigate('/createTeam')
 			} else {
-				console.error('Ошибка: команда не найдена.')
+				console.error('Error: command not found.')
 			}
 		} catch (error) {
-			console.error('Ошибка при выходе из команды:', error)
+			console.error('Error when leaving the team:', error)
 		}
 	}
 	return (
@@ -192,9 +192,19 @@ function Team() {
 				teamStatus.exists === null ? (
 					<span>Loading...</span>
 				) : teamStatus.exists === false ? (
-					<span>Команда не существует</span>
+					<>
+						<Link to={`/createteam`} className='text-gray-500'>
+							Go bake
+						</Link>
+						<p>The command does not exist</p>
+					</>
 				) : teamStatus.member === false ? (
-					<span>Вы не состоите в этой команде</span>
+					<>
+						<Link to={`/createteam`} className='text-gray-500'>
+							Go bake
+						</Link>
+						<p>You are not on this team</p>
+					</>
 				) : (
 					<div>
 						<div className='flex mb-6'>
@@ -240,22 +250,22 @@ function Team() {
 											</div>
 										</Link>
 									))}
-									<div>
-										<div className='relative max-lg:row-start-1'>
-											<div className='absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]'></div>
-											<div className='relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]'>
-												<div className='px-8 pt-4 sm:px-10 sm:pt-5'>
-													<p className='text-lg/7 font-medium tracking-tight text-gray-950 max-lg:text-center'>
-														{['admin', 'edit'].includes(userRole) && (
+									{['admin', 'edit'].includes(userRole) && (
+										<div>
+											<div className='relative max-lg:row-start-1'>
+												<div className='absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]'></div>
+												<div className='relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]'>
+													<div className='px-8 pt-4 sm:px-10 sm:pt-5'>
+														<p className='text-lg/7 font-medium tracking-tight text-gray-950 max-lg:text-center'>
 															<CreateProject />
-														)}
-													</p>
+														</p>
+													</div>
+													<div className='flex flex-1 items-center justify-center px-8 py-5 max-lg:pt-10 sm:px-10'></div>
 												</div>
-												<div className='flex flex-1 items-center justify-center px-8 py-5 max-lg:pt-10 sm:px-10'></div>
+												<div className='pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]'></div>
 											</div>
-											<div className='pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]'></div>
 										</div>
-									</div>
+									)}
 								</div>
 							</div>
 						) : (
@@ -284,8 +294,13 @@ function Team() {
 							</>
 						)}
 						<hr className='my-8' />
-						{userRole === 'admin' && <InviteOnTeam />}
-						<hr className='my-8' />
+						{userRole === 'admin' && (
+							<>
+								<InviteOnTeam />
+								<hr className='my-8' />
+							</>
+						)}
+
 						<h3 className='text-center text-3xl my-10'>Team composition:</h3>
 						<ul>
 							{teamUsers.map(teamUser => (

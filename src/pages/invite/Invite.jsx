@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import { getDatabase, ref, get, child, set } from 'firebase/database'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { child, get, getDatabase, ref, remove, set } from 'firebase/database'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 function Invite() {
@@ -40,7 +40,7 @@ function Invite() {
 			.then(snapshot => {
 				if (snapshot.exists()) {
 					setInviteData(snapshot.val())
-					setError(null) // Сбрасываем ошибку, если данные найдены
+					setError(null)
 				} else {
 					setError('Invite not found or has expired.')
 				}
@@ -56,6 +56,7 @@ function Invite() {
 			setError('You must be logged in to accept the invite.')
 			return
 		}
+		console.log(email, user.email)
 		if (email !== user.email) {
 			setError('Your email does not match the one associated with this invite.')
 			return
@@ -64,7 +65,7 @@ function Invite() {
 		try {
 			const database = getDatabase()
 			const urlParams = new URLSearchParams(window.location.search)
-			const teamName = urlParams.get('teamname')
+			const teamName = urlParams.get('name')
 			const inviteCode = urlParams.get('key')
 
 			const userRef = child(
@@ -87,13 +88,39 @@ function Invite() {
 				role: role,
 				access: access,
 			})
-			await set(inviteRef, null)
+			await remove(inviteRef)
 
 			alert('Invite accepted successfully!')
 			navigate('/team?teamname=' + teamName)
 		} catch (err) {
 			console.error('Error accepting invite:', err)
 			setError('Failed to accept invite.')
+		}
+	}
+
+	const denyInvite = async () => {
+		if (!user) {
+			setError('You must be logged in to deny the invite.')
+			return
+		}
+
+		try {
+			const database = getDatabase()
+			const urlParams = new URLSearchParams(window.location.search)
+			const teamName = urlParams.get('name')
+			const inviteCode = urlParams.get('key')
+
+			const inviteRef = child(
+				ref(database),
+				`/teams/${teamName}/invites/${inviteCode}`
+			)
+
+			await remove(inviteRef)
+			alert('Invite denied successfully!')
+			navigate('/')
+		} catch (err) {
+			console.error('Error denying invite:', err)
+			setError('Failed to deny invite.')
 		}
 	}
 
@@ -114,13 +141,15 @@ function Invite() {
 						onClick={() =>
 							acceptInvite(
 								inviteData.role,
-								inviteData.role !== 'admin' && inviteData.access == null,
+								inviteData.role !== 'admin' ? inviteData.access : null,
 								inviteData.email
 							)
 						}
+						className='mr-4'
 					>
 						Agree
 					</button>
+					<button onClick={denyInvite}>Deny</button>
 				</div>
 			) : !error ? (
 				<h2>Loading invite details...</h2>

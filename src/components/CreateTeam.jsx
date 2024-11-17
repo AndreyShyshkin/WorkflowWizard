@@ -15,7 +15,7 @@ function CreateTeam() {
 		onAuthStateChanged(auth, currentUser => {
 			if (currentUser) {
 				setUser(currentUser)
-				fetchUserTeams(currentUser.uid) // Fetch teams on auth change
+				fetchUserTeams(currentUser.uid)
 			} else {
 				navigate('/auth')
 			}
@@ -36,12 +36,12 @@ function CreateTeam() {
 						userTeamsList.push(teamName)
 						if (teams[teamName].users[userId].work === true && !redirected) {
 							navigate(`/team?teamname=${teamName}`)
-							redirected = true // Переадресуем только один раз
+							redirected = true
 						}
 					}
 				})
 
-				setUserTeams(userTeamsList) // Update user teams
+				setUserTeams(userTeamsList)
 			}
 		} catch (error) {
 			console.error('Error fetching teams:', error)
