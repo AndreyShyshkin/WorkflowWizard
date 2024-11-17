@@ -5,9 +5,17 @@ import {
 	push,
 	ref,
 	remove,
+	set,
 	update,
 } from 'firebase/database'
-import { GripVertical, Plus, Table as TableIcon, Trash2, X } from 'lucide-react'
+import {
+	GripVertical,
+	ListTodo,
+	Plus,
+	Table as TableIcon,
+	Trash2,
+	X,
+} from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Container, Draggable } from 'react-smooth-dnd'
@@ -21,6 +29,7 @@ function Task() {
 	const [newTaskText, setNewTaskText] = useState('')
 	const [showInput, setShowInput] = useState(null)
 	const [tableSize, setTableSize] = useState({ rows: 3, cols: 3 })
+	const [isDragging, setIsDragging] = useState(false)
 
 	const urlParams = new URLSearchParams(window.location.search)
 	const teamName = urlParams.get('teamname')
@@ -34,21 +43,19 @@ function Task() {
 			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections`
 		)
 		onValue(sectionsRef, snapshot => {
-			if (snapshot.exists()) {
-				const sectionsData = snapshot.val()
-				setSections(
-					Object.entries(sectionsData).map(([id, section]) => ({
-						id,
-						...section,
-					}))
-				)
-			} else {
-				const initialSection = {
-					type: 'text',
-					content: '',
-					todos: [],
+			if (!isDragging) {
+				if (snapshot.exists()) {
+					const sectionsData = snapshot.val()
+					setSections(
+						Object.entries(sectionsData).map(([id, section]) => ({
+							id,
+							...section,
+						}))
+					)
+				} else {
+					// Просто установим пустой массив, если секций нет
+					setSections([])
 				}
-				push(sectionsRef, initialSection)
 			}
 		})
 	}
@@ -74,64 +81,45 @@ function Task() {
 		update(sectionRef, { tableData: newTableData })
 	}
 
-	// Table management functions
-	const addRow = (sectionId, atIndex) => {
-		const section = sections.find(s => s.id === sectionId)
-		const newTableData = [...section.tableData]
-		const newRow = Array(newTableData[0].length).fill('')
-		newTableData.splice(atIndex + 1, 0, newRow)
+	const onDrop = ({ removedIndex, addedIndex }) => {
+		setIsDragging(true)
 
-		const sectionRef = ref(
+		// Локально обновляем состояние
+		const newSections = [...sections]
+		const [removed] = newSections.splice(removedIndex, 1)
+		newSections.splice(addedIndex, 0, removed)
+		setSections(newSections)
+
+		// Обновляем Firebase
+		const sectionsRef = ref(
 			database,
-			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}`
+			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections`
 		)
-		update(sectionRef, { tableData: newTableData })
-	}
-
-	const deleteRow = (sectionId, rowIndex) => {
-		const section = sections.find(s => s.id === sectionId)
-		const newTableData = [...section.tableData]
-		if (newTableData.length > 1) {
-			newTableData.splice(rowIndex, 1)
-
-			const sectionRef = ref(
-				database,
-				`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}`
-			)
-			update(sectionRef, { tableData: newTableData })
-		}
-	}
-
-	const addColumn = (sectionId, atIndex) => {
-		const section = sections.find(s => s.id === sectionId)
-		const newTableData = section.tableData.map(row => {
-			const newRow = [...row]
-			newRow.splice(atIndex + 1, 0, '')
-			return newRow
+		const sectionsObject = {}
+		newSections.forEach(section => {
+			sectionsObject[section.id] = {
+				type: section.type,
+				content: section.content,
+				todos: section.todos || {},
+				tableData: section.tableData,
+			}
 		})
 
+		set(sectionsRef, sectionsObject)
+			.then(() => setIsDragging(false))
+			.catch(() => {
+				// Восстановление предыдущего состояния при ошибке
+				setSections([...sections])
+				setIsDragging(false)
+			})
+	}
+
+	const handleDeleteSection = sectionId => {
 		const sectionRef = ref(
 			database,
 			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}`
 		)
-		update(sectionRef, { tableData: newTableData })
-	}
-
-	const deleteColumn = (sectionId, colIndex) => {
-		const section = sections.find(s => s.id === sectionId)
-		if (section.tableData[0].length > 1) {
-			const newTableData = section.tableData.map(row => {
-				const newRow = [...row]
-				newRow.splice(colIndex, 1)
-				return newRow
-			})
-
-			const sectionRef = ref(
-				database,
-				`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}`
-			)
-			update(sectionRef, { tableData: newTableData })
-		}
+		remove(sectionRef)
 	}
 
 	const handleAddTodo = sectionId => {
@@ -140,22 +128,27 @@ function Task() {
 			return
 		}
 
-		const sectionRef = ref(
-			database,
-			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}/todos`
-		)
-
-		const newTodo = {
-			text: newTaskText,
-			completed: false,
+		const section = sections.find(s => s.id === sectionId)
+		const todos = section.todos || {}
+		const updatedTodos = {
+			...todos,
+			[Date.now()]: {
+				text: newTaskText,
+				completed: false,
+			},
 		}
 
-		push(sectionRef, newTodo)
+		const sectionRef = ref(
+			database,
+			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}`
+		)
+
+		update(sectionRef, { todos: updatedTodos })
 		setNewTaskText('')
 		setShowInput(null)
 	}
 
-	const handleAddSection = (currentIndex, type = 'text') => {
+	const handleAddSection = (type = 'text') => {
 		const sectionsRef = ref(
 			database,
 			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections`
@@ -164,7 +157,6 @@ function Task() {
 		let newSection = {
 			type,
 			content: '',
-			todos: [],
 		}
 
 		if (type === 'table') {
@@ -173,23 +165,38 @@ function Task() {
 				.map(() => Array(tableSize.cols).fill(''))
 		}
 
+		if (type === 'todo') {
+			newSection.todos = {}
+		}
+
 		push(sectionsRef, newSection)
 	}
 
 	const handleTodoToggle = (sectionId, todoId, currentCompleted) => {
-		const todoRef = ref(
+		const section = sections.find(s => s.id === sectionId)
+		const updatedTodos = { ...section.todos }
+		updatedTodos[todoId] = {
+			...updatedTodos[todoId],
+			completed: !currentCompleted,
+		}
+
+		const sectionRef = ref(
 			database,
-			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}/todos/${todoId}`
+			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}`
 		)
-		update(todoRef, { completed: !currentCompleted })
+		update(sectionRef, { todos: updatedTodos })
 	}
 
 	const handleDeleteTodo = (sectionId, todoId) => {
-		const todoRef = ref(
+		const section = sections.find(s => s.id === sectionId)
+		const updatedTodos = { ...section.todos }
+		delete updatedTodos[todoId]
+
+		const sectionRef = ref(
 			database,
-			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}/todos/${todoId}`
+			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}`
 		)
-		remove(todoRef)
+		update(sectionRef, { todos: updatedTodos })
 	}
 
 	useEffect(() => {
@@ -203,121 +210,154 @@ function Task() {
 		})
 	}, [auth, navigate])
 
-	const updateSectionTable = (sectionId, newTableData) => {
-		const sectionRef = ref(
-			database,
-			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections/${sectionId}`
-		)
-		update(sectionRef, { tableData: newTableData })
-	}
-
 	const TableSection = ({ section }) => (
-		<div className='relative overflow-x-auto group'>
-			{/* Заголовок таблицы для перетаскивания столбцов */}
+		<div className='relative overflow-x-auto'>
+			{/* Column control buttons */}
 			<div className='flex mb-2'>
-				<Container
-					orientation='horizontal'
-					dragHandleSelector='.drag-handle'
-					onDrop={({ removedIndex, addedIndex }) => {
-						if (removedIndex !== null && addedIndex !== null) {
-							const newTableData = section.tableData.map(row => {
-								const newRow = [...row]
-								const [movedCell] = newRow.splice(removedIndex, 1)
-								newRow.splice(addedIndex, 0, movedCell)
-								return newRow
-							})
-							updateSectionTable(section.id, newTableData)
-						}
-					}}
-				>
-					{section.tableData[0].map((_, colIndex) => (
-						<Draggable key={colIndex}>
-							<div className='relative flex items-center'>
-								<button
-									onClick={() => deleteColumn(section.id, colIndex)}
-									className='absolute top-0 left-0 text-red-500 hover:text-red-700 p-1 opacity-0 group-hover:opacity-100 transition'
-									title='Delete column'
-								>
-									<X className='h-4 w-4' />
-								</button>
-								<GripVertical className='drag-handle cursor-grab text-gray-500 ml-2' />
-							</div>
-						</Draggable>
-					))}
-				</Container>
+				{section.tableData[0].map((_, colIndex) => (
+					<div key={colIndex} className='flex-1 flex justify-center'>
+						<button
+							onClick={() => deleteColumn(section.id, colIndex)}
+							className='text-red-500 hover:text-red-700 p-1'
+							title='Delete column'
+						>
+							<X className='h-4 w-4' />
+						</button>
+					</div>
+				))}
 			</div>
 
-			{/* Содержимое таблицы для перетаскивания строк */}
-			<Container
-				dragHandleSelector='.drag-handle'
-				onDrop={({ removedIndex, addedIndex }) => {
-					if (removedIndex !== null && addedIndex !== null) {
-						const newTableData = [...section.tableData]
-						const [movedRow] = newTableData.splice(removedIndex, 1)
-						newTableData.splice(addedIndex, 0, movedRow)
-						updateSectionTable(section.id, newTableData)
-					}
-				}}
-			>
-				{section.tableData.map((row, rowIndex) => (
-					<Draggable key={rowIndex}>
-						<div className='flex items-center'>
+			<div className='flex'>
+				{/* Row control buttons */}
+				<div className='flex flex-col justify-center mr-2'>
+					{section.tableData.map((_, rowIndex) => (
+						<div key={rowIndex} className='flex items-center my-1'>
 							<button
 								onClick={() => deleteRow(section.id, rowIndex)}
-								className='text-red-500 hover:text-red-700 p-1 opacity-0 group-hover:opacity-100 transition'
+								className='text-red-500 hover:text-red-700 p-1'
 								title='Delete row'
 							>
 								<X className='h-4 w-4' />
 							</button>
-							<GripVertical className='drag-handle cursor-grab text-gray-500 ml-2' />
-							<table className='w-full border-collapse border border-gray-300 ml-2'>
-								<tbody>
-									<tr>
-										{row.map((cell, colIndex) => (
-											<td
-												key={colIndex}
-												className='border border-gray-300 p-2 min-w-[100px]'
-											>
-												<input
-													type='text'
-													value={cell}
-													onChange={e =>
-														handleTableCellChange(
-															section.id,
-															rowIndex,
-															colIndex,
-															e.target.value
-														)
-													}
-													className='w-full outline-none'
-												/>
-											</td>
-										))}
-										<td className='border-0 p-2'>
-											<button
-												onClick={() => addColumn(section.id, row.length - 1)}
-												className='text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition'
-												title='Add column'
-											>
-												<Plus className='h-4 w-4' />
-											</button>
-										</td>
-									</tr>
-								</tbody>
-							</table>
 						</div>
-					</Draggable>
-				))}
-			</Container>
+					))}
+				</div>
 
-			{/* Кнопка для добавления строки */}
-			<button
-				onClick={() => addRow(section.id, section.tableData.length - 1)}
-				className='text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition'
-				title='Add row'
-			>
-				<Plus className='h-4 w-4' />
-			</button>
+				{/* Table content */}
+				<table className='min-w-full border-collapse border border-gray-300'>
+					<tbody>
+						{section.tableData.map((row, rowIndex) => (
+							<tr key={rowIndex}>
+								{row.map((cell, colIndex) => (
+									<td
+										key={colIndex}
+										className='border border-gray-300 p-2 min-w-[100px]'
+									>
+										<input
+											type='text'
+											value={cell}
+											onChange={e =>
+												handleTableCellChange(
+													section.id,
+													rowIndex,
+													colIndex,
+													e.target.value
+												)
+											}
+											className='w-full outline-none'
+										/>
+									</td>
+								))}
+								{/* Add column button at the end of each row */}
+								<td className='border-0 p-2'>
+									<button
+										onClick={() => addColumn(section.id, row.length - 1)}
+										className='text-blue-500 hover:text-blue-700'
+										title='Add column'
+									>
+										<Plus className='h-4 w-4' />
+									</button>
+								</td>
+							</tr>
+						))}
+						{/* Add row button at the bottom */}
+						<tr>
+							<td
+								colSpan={section.tableData[0].length + 1}
+								className='border-0 p-2'
+							>
+								<button
+									onClick={() =>
+										addRow(section.id, section.tableData.length - 1)
+									}
+									className='text-blue-500 hover:text-blue-700'
+									title='Add row'
+								>
+									<Plus className='h-4 w-4' />
+								</button>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	)
+
+	const TodoSection = ({ section }) => (
+		<div>
+			{section.todos &&
+				Object.entries(section.todos).map(([todoId, todo]) => (
+					<div key={todoId} className='flex items-center gap-2 mb-2'>
+						<input
+							type='checkbox'
+							checked={todo.completed}
+							onChange={() =>
+								handleTodoToggle(section.id, todoId, todo.completed)
+							}
+							className='form-checkbox'
+						/>
+						<span className={todo.completed ? 'line-through' : ''}>
+							{todo.text}
+						</span>
+						<button
+							onClick={() => handleDeleteTodo(section.id, todoId)}
+							className='p-1 hover:bg-red-50 rounded'
+						>
+							<Trash2 className='h-4 w-4 text-red-500' />
+						</button>
+					</div>
+				))}
+
+			{showInput === section.id ? (
+				<div className='flex gap-2 mt-2'>
+					<input
+						type='text'
+						value={newTaskText}
+						onChange={e => setNewTaskText(e.target.value)}
+						onKeyDown={e => {
+							if (e.key === 'Enter') {
+								handleAddTodo(section.id)
+							}
+						}}
+						className='border rounded px-2 py-1'
+						placeholder='New todo item'
+						autoFocus
+					/>
+					<button
+						onClick={() => handleAddTodo(section.id)}
+						className='bg-blue-500 text-white px-3 py-1 rounded'
+					>
+						Add
+					</button>
+				</div>
+			) : (
+				<button
+					onClick={() => setShowInput(section.id)}
+					className='text-blue-500 hover:text-blue-700'
+				>
+					+ Add Todo
+				</button>
+			)}
 		</div>
 	)
 
@@ -326,91 +366,95 @@ function Task() {
 			<h1 className='text-2xl font-bold mb-4'>Task: {taskName}</h1>
 			<p className='mb-6'>Deadline: {deadline}</p>
 
-			{sections.map((section, index) => (
-				<div key={section.id} className='mb-6'>
-					{section.type === 'text' && (
-						<textarea
-							className='w-full p-2 border rounded min-h-[100px]'
-							value={section.content}
-							onChange={e => handleTextChange(section.id, e.target.value)}
-							placeholder='Enter your text here...'
-						/>
-					)}
+			<Container onDrop={onDrop}>
+				{sections.map(section => (
+					<Draggable key={section.id}>
+						<div className='mb-6 rounded-lg shadow p-4'>
+							<div className='flex items-center justify-between mb-2'>
+								<div className='cursor-move'>
+									<GripVertical className='h-5 w-5 text-gray-400' />
+								</div>
+								<button
+									onClick={() => handleDeleteSection(section.id)}
+									className='text-red-500 hover:text-red-700'
+								>
+									<Trash2 className='h-5 w-5' />
+								</button>
+							</div>
 
-					{section.type === 'table' && <TableSection section={section} />}
-
-					{section.todos &&
-						Object.entries(section.todos).map(([todoId, todo]) => (
-							<div key={todoId} className='flex items-center gap-2 ml-4 mb-2'>
-								<input
-									type='checkbox'
-									checked={todo.completed}
-									onChange={() =>
-										handleTodoToggle(section.id, todoId, todo.completed)
-									}
-									className='form-checkbox'
+							{section.type === 'text' && (
+								<textarea
+									className='w-full p-2 border rounded min-h-[100px]'
+									value={section.content}
+									onChange={e => handleTextChange(section.id, e.target.value)}
+									placeholder='Enter your text here...'
 								/>
-								<span className={todo.completed ? 'line-through' : ''}>
-									{todo.text}
-								</span>
-								<button
-									onClick={() => handleDeleteTodo(section.id, todoId)}
-									className='p-1 hover:bg-red-50 rounded'
-								>
-									<Trash2 className='h-4 w-4 text-red-500' />
-								</button>
-							</div>
-						))}
+							)}
 
-					<div className='flex gap-2 mt-2'>
-						{showInput === section.id ? (
-							<div className='flex gap-2'>
-								<input
-									type='text'
-									value={newTaskText}
-									onChange={e => setNewTaskText(e.target.value)}
-									onKeyDown={e => {
-										if (e.key === 'Enter') {
-											handleAddTodo(section.id)
-										}
-									}}
-									className='border rounded px-2 py-1'
-									placeholder='New todo item'
-									autoFocus
-								/>
-								<button
-									onClick={() => handleAddTodo(section.id)}
-									className='bg-blue-500 text-white px-3 py-1 rounded'
-								>
-									Add
-								</button>
-							</div>
-						) : (
-							<div className='flex gap-2'>
-								<button
-									onClick={() => setShowInput(section.id)}
-									className='text-blue-500 hover:text-blue-700'
-								>
-									+ Add Todo
-								</button>
-								<button
-									onClick={() => handleAddSection(index, 'text')}
-									className='text-green-500 hover:text-green-700'
-								>
-									+ Add Text Block
-								</button>
-								<button
-									onClick={() => handleAddSection(index, 'table')}
-									className='text-purple-500 hover:text-purple-700 flex items-center gap-1'
-								>
-									<TableIcon className='w-4 h-4' />
-									Add Table
-								</button>
-							</div>
-						)}
+							{section.type === 'table' && <TableSection section={section} />}
+
+							{section.type === 'todo' && <TodoSection section={section} />}
+						</div>
+					</Draggable>
+				))}
+			</Container>
+
+			{sections.length === 0 ? (
+				// Показываем сообщение и кнопки, если нет секций
+				<div className='text-center py-8'>
+					<p className='text-gray-500 mb-4'>
+						No sections yet. Create your first section:
+					</p>
+					<div className='flex gap-2 justify-center'>
+						<button
+							onClick={() => handleAddSection('text')}
+							className='bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 flex items-center gap-1'
+						>
+							<Plus className='h-4 w-4' />
+							Text Block
+						</button>
+						<button
+							onClick={() => handleAddSection('todo')}
+							className='bg-blue-100 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-200 flex items-center gap-1'
+						>
+							<ListTodo className='h-4 w-4' />
+							Todo List
+						</button>
+						<button
+							onClick={() => handleAddSection('table')}
+							className='bg-purple-100 text-purple-700 px-3 py-2 rounded-lg hover:bg-purple-200 flex items-center gap-1'
+						>
+							<TableIcon className='h-4 w-4' />
+							Table
+						</button>
 					</div>
 				</div>
-			))}
+			) : (
+				// Показываем обычные кнопки добавления, если есть секции
+				<div className='flex gap-2 mb-4'>
+					<button
+						onClick={() => handleAddSection('text')}
+						className='bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 flex items-center gap-1'
+					>
+						<Plus className='h-4 w-4' />
+						Text Block
+					</button>
+					<button
+						onClick={() => handleAddSection('todo')}
+						className='bg-blue-100 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-200 flex items-center gap-1'
+					>
+						<ListTodo className='h-4 w-4' />
+						Todo List
+					</button>
+					<button
+						onClick={() => handleAddSection('table')}
+						className='bg-purple-100 text-purple-700 px-3 py-2 rounded-lg hover:bg-purple-200 flex items-center gap-1'
+					>
+						<TableIcon className='h-4 w-4' />
+						Table
+					</button>
+				</div>
+			)}
 		</div>
 	)
 }

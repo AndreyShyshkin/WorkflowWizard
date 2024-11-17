@@ -95,31 +95,28 @@ function CreateTask({ date }) {
 
 	const handleDeleteTask = async taskId => {
 		try {
+			// Удаляем задачу целиком - это автоматически удалит все дочерние узлы, включая sections
 			const taskRef = ref(
 				database,
 				`teams/${teamName}/projects/${projectName}/tasks/${date}/${taskId}`
 			)
-
-			// Remove the task from the database
 			await remove(taskRef)
 
-			// Filter out the task from the userTasks state
+			// Пересчитать порядок оставшихся задач
 			const remainingTasks = userTasks.filter(task => task.id !== taskId)
-			const updates = {}
 
-			// Update the order of remaining tasks
-			remainingTasks.forEach((task, index) => {
-				updates[
-					`teams/${teamName}/projects/${projectName}/tasks/${date}/${task.id}/order`
-				] = index
-			})
+			if (remainingTasks.length > 0) {
+				const updates = {}
+				remainingTasks.forEach((task, index) => {
+					updates[
+						`teams/${teamName}/projects/${projectName}/tasks/${date}/${task.id}/order`
+					] = index
+				})
 
-			// Update the database with the new task order
-			if (Object.keys(updates).length > 0) {
 				await update(ref(database), updates)
 			}
 
-			// Re-fetch tasks to reflect the deletion
+			// Обновить состояние задач
 			fetchUserTasks()
 		} catch (error) {
 			console.error('Error deleting task:', error)
@@ -291,7 +288,8 @@ function CreateTask({ date }) {
 							<div className='absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
 								<button
 									onClick={e => {
-										e.preventDefault()
+										e.preventDefault() // Останавливает стандартное поведение
+										e.stopPropagation() // Останавливает всплытие события
 										handleDeleteTask(task.id)
 									}}
 									className='p-1 hover:bg-red-50 rounded'
