@@ -60,7 +60,7 @@ function CreateTeam() {
 					if (teams[teamName].users && teams[teamName].users[userId]) {
 						userTeamsList.push(teamName)
 						if (teams[teamName].users[userId].work === true && !redirected) {
-							navigate(`/team?name=${teamName}`)
+							navigate(`/team?teamname=${teamName}`)
 							redirected = true // Переадресуем только один раз
 						}
 					}
@@ -99,7 +99,7 @@ function CreateTeam() {
 				role: 'admin',
 			})
 			//sendWelcomeEmail("shyshkinandrey06@gmail.com");
-			navigate('/team?name=' + trimmedName)
+			navigate('/team?teamname=' + trimmedName)
 		} catch (error) {
 			console.error('Error creating team:', error.code, error.message)
 		}
@@ -114,7 +114,7 @@ function CreateTeam() {
 						{userTeams.map(team => (
 							<li key={team}>
 								<span>{team}</span>
-								<Link to={`/team?name=${team}`}>Go to team</Link>
+								<Link to={`/team?teamname=${team}`}>Go to team</Link>
 							</li>
 						))}
 					</ul>

@@ -75,7 +75,9 @@ function Project() {
 								{user.displayName} Добро пожаловать в команду {teamName} вы
 								работаетаете над проектом {projectName}
 							</span>
-							<Link to={`/team?name=${teamName}`}>Выбрать другой проект</Link>
+							<Link to={`/team?teamname=${teamName}`}>
+								Выбрать другой проект
+							</Link>
 							<div>
 								<p>Statistics</p>
 								<p>Tasks</p>

@@ -12,7 +12,7 @@ function InviteOnTeam() {
 	const auth = getAuth()
 	const database = getDatabase()
 	const urlParams = new URLSearchParams(window.location.search)
-	const teamName = urlParams.get('name')
+	const teamName = urlParams.get('teamname')
 
 	useEffect(() => {
 		const unsubscribe = onAuthStateChanged(auth, user => {

@@ -8,6 +8,7 @@ import './index.css'
 import Auth from './pages/auth/Auth.jsx'
 import Invite from './pages/invite/Invite.jsx'
 import Project from './pages/project/Project.jsx'
+import Settings from './pages/settings/Settings.jsx'
 import Task from './pages/task/Task.jsx'
 import Team from './pages/team/Team.jsx'
 import Welcome from './pages/welcome/Welcome.jsx'
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
 			{ path: 'team/project', element: <Project /> },
 			{ path: 'team/project/task', element: <Task /> },
 			{ path: 'createteam', element: <CreateTeam /> },
+			{ path: 'settings', element: <Settings /> },
 			{ path: 'invite', element: <Invite /> },
 		],
 	},
