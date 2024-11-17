@@ -2,23 +2,22 @@ import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { get, getDatabase, ref, update } from 'firebase/database'
+import { Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import logo from '../../assets/logo.png'
+import noPhoto from '../../assets/noPhoto.png'
 
 function Nav() {
 	const [user, setUser] = useState(null)
 	const auth = getAuth()
 	const database = getDatabase()
 	const navigate = useNavigate()
-	const location = useLocation()
 	const [userTeams, setUserTeams] = useState([])
 	const [userProjects, setUserProjects] = useState([])
 	const urlParams = new URLSearchParams(window.location.search)
 	const teamName = urlParams.get('teamname')
 	const projectName = urlParams.get('projectname')
-
-	// Текущий путь
-	console.log(location.pathname)
 
 	const fetchUserTeams = async userId => {
 		const teamsRef = ref(database, 'teams')
@@ -103,90 +102,123 @@ function Nav() {
 	}
 
 	return (
-		<div className='nav'>
-			<Link to='/' className='nav-title'>
-				Workflow Wizard
-			</Link>
-			{teamName && (
-				<Menu as='div' className='relative inline-block text-left'>
-					<div>
-						<MenuButton className='inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50'>
-							{teamName}
-							<ChevronDownIcon
-								aria-hidden='true'
-								className='-mr-1 size-5 text-gray-400'
-							/>
-						</MenuButton>
-					</div>
+		<div className='nav flex justify-between py-5'>
+			<div className='flex h-full'>
+				<Link to='/' className='nav-title my-auto mr-8'>
+					<img
+						className='h-16 w-16 rounded-full my-auto'
+						src={logo}
+						alt='logo'
+					/>
+				</Link>
+				{user ? (
+					<div className='flex'>
+						{teamName && (
+							<Menu
+								as='div'
+								className='relative inline-block text-left my-auto'
+							>
+								<div>
+									<MenuButton className='inline-flex w-full justify-center gap-x-1.5 rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-neutral-800'>
+										{teamName}
+										<ChevronDownIcon
+											aria-hidden='true'
+											className='-mr-1 size-5 text-gray-400'
+										/>
+									</MenuButton>
+								</div>
 
-					<MenuItems
-						transition
-						className='absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in'
-					>
-						<div className='py-1'>
-							{userTeams.map(team => (
-								<MenuItem key={team}>
-									<Link
-										className='block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none'
-										to={`/team?teamname=${team}`}
-									>
-										{team}
-									</Link>
-								</MenuItem>
-							))}
-							<MenuItem>
-								<p
-									className='block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none'
-									onClick={handleChangeTeam}
+								<MenuItems
+									transition
+									className='absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in'
 								>
-									Full list
-								</p>
-							</MenuItem>
-						</div>
-					</MenuItems>
-				</Menu>
-			)}
-			{projectName && (
-				<Menu as='div' className='relative inline-block text-left'>
-					<div>
-						<MenuButton className='inline-flex w-full justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50'>
-							{projectName}
-							<ChevronDownIcon
-								aria-hidden='true'
-								className='-mr-1 size-5 text-gray-400'
-							/>
-						</MenuButton>
-					</div>
+									<div className='py-1'>
+										{userTeams.map(team => (
+											<MenuItem key={team}>
+												<Link
+													className='block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none'
+													to={`/team?teamname=${team}`}
+												>
+													{team}
+												</Link>
+											</MenuItem>
+										))}
+										<MenuItem>
+											<p
+												className='block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none'
+												onClick={handleChangeTeam}
+											>
+												Full list
+											</p>
+										</MenuItem>
+									</div>
+								</MenuItems>
+							</Menu>
+						)}
 
-					<MenuItems
-						transition
-						className='absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in'
-					>
-						<div className='py-1'>
-							{userProjects.map(project => (
-								<MenuItem key={project}>
-									<Link
-										className='block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none'
-										to={`/team/project?teamname=${teamName}&projectname=${project}`}
-									>
-										{project}
-									</Link>
-								</MenuItem>
-							))}
-							<MenuItem>
-								<Link
-									className='block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none'
-									to={`/team?teamname=${teamName}`}
+						{projectName && <span className='my-auto mx-2'> {'>'} </span>}
+
+						{projectName && (
+							<Menu
+								as='div'
+								className='relative inline-block text-left my-auto'
+							>
+								<div>
+									<MenuButton className='inline-flex w-full justify-center gap-x-1.5 rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-neutral-800'>
+										{projectName}
+										<ChevronDownIcon
+											aria-hidden='true'
+											className='-mr-1 size-5 text-gray-400'
+										/>
+									</MenuButton>
+								</div>
+
+								<MenuItems
+									transition
+									className='absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in'
 								>
-									Full list
-								</Link>
-							</MenuItem>
-						</div>
-					</MenuItems>
-				</Menu>
+									<div className='py-1'>
+										{userProjects.map(project => (
+											<MenuItem key={project}>
+												<Link
+													className='block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none'
+													to={`/team/project?teamname=${teamName}&projectname=${project}`}
+												>
+													{project}
+												</Link>
+											</MenuItem>
+										))}
+										<MenuItem>
+											<Link
+												className='block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none'
+												to={`/team?teamname=${teamName}`}
+											>
+												Full list
+											</Link>
+										</MenuItem>
+									</div>
+								</MenuItems>
+							</Menu>
+						)}
+					</div>
+				) : null}
+			</div>
+			{user ? (
+				<div className='flex'>
+					<Link to='/settings' className='my-auto'>
+						<Settings />
+					</Link>
+					<span className='my-auto ml-4'>{user.displayName}</span>
+					<img
+						src={user.photoURL || noPhoto}
+						alt='User Avatar'
+						className='h-8 w-8 rounded-full my-auto ml-2'
+						onError={e => (e.target.style.display = 'none')}
+					/>
+				</div>
+			) : (
+				<Link to='/auth'>Login</Link>
 			)}
-			<Link to='/settings'>settings</Link>
-			{user ? <span>{user.displayName}</span> : <Link to='/auth'>login</Link>}
 		</div>
 	)
 }

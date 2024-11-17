@@ -43,7 +43,7 @@ function CreateTask({ date }) {
 				setUser(currentUser)
 				fetchUserTasks()
 			} else {
-				navigate('/login')
+				navigate('/auth')
 			}
 		})
 	}, [auth, navigate])
@@ -230,10 +230,10 @@ function CreateTask({ date }) {
 		}
 	}
 
-	const handleTaskClick = taskId => {
+	const handleTaskClick = (taskId, taskPriority) => {
 		// Navigate to the task's detailed page
 		navigate(
-			`/team/project/task?teamname=${teamName}&projectname=${projectName}&deadline=${date}&taskname=${taskId}`
+			`/team/project/task?teamname=${teamName}&projectname=${projectName}&deadline=${date}&taskname=${taskId}&priority=${taskPriority}`
 		)
 	}
 
@@ -248,8 +248,8 @@ function CreateTask({ date }) {
 	}
 
 	return (
-		<div className='p-4 border rounded-lg'>
-			<h3 className='mb-4'>{date}</h3>
+		<div className='p-4'>
+			<h3 className='mb-4 text-2xl'>{date}</h3>
 			<Container
 				groupName='tasks'
 				onDrop={handleDrop}
@@ -266,7 +266,7 @@ function CreateTask({ date }) {
 							className={`p-2 mb-2 border rounded shadow-sm ${getPriorityColor(
 								task.priority
 							)} relative group cursor-grab active:cursor-grabbing transition-colors`}
-							onClick={() => handleTaskClick(task.id)} // Handle task click
+							onClick={() => handleTaskClick(task.id, task.priority)} // Handle task click
 							onMouseDown={() => handleLongPressStart(task)} // Detect long press start
 							onMouseUp={handleLongPressEnd} // Detect long press end
 							onMouseLeave={handleLongPressEnd} // Handle if mouse leaves
@@ -305,7 +305,7 @@ function CreateTask({ date }) {
 			<div className='mt-4 space-y-2'>
 				<input
 					type='text'
-					className='p-2 border rounded w-full'
+					className='input-task-board w-full'
 					placeholder='Enter task name'
 					value={taskName}
 					onChange={e => setTaskName(e.target.value)}
@@ -317,7 +317,7 @@ function CreateTask({ date }) {
 							<button
 								key={priority.value}
 								onClick={() => setSelectedPriority(priority.value)}
-								className={`px-3 py-1 rounded-full text-sm ${priority.color} ${
+								className={`px-3 py-1 rounded-md text-sm ${priority.color} ${
 									selectedPriority === priority.value
 										? 'ring-2 ring-offset-2 ring-blue-500'
 										: ''
@@ -331,7 +331,7 @@ function CreateTask({ date }) {
 
 				<button
 					onClick={handleCreateTask}
-					className='px-4 py-2 bg-blue-500 text-white rounded w-full'
+					className='button-task-board w-full'
 					disabled={!taskName.trim()}
 				>
 					Create Task

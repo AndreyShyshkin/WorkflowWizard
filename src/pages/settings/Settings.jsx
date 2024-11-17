@@ -80,50 +80,75 @@ function Settings() {
 
 	return (
 		<div>
-			<h1>Settings</h1>
+			<h1 className='text-2xl my-auto'>Settings</h1>
 			{user ? (
 				<div>
 					<img
 						src={user.photoURL || noPhoto}
 						alt='User Avatar'
+						className='w-24 h-24 rounded-full my-6'
 						onError={e => (e.target.style.display = 'none')}
 					/>
 					<input
 						type='text'
 						placeholder='New avatar URL'
 						value={newAvatar}
+						className='input-settings'
 						onChange={e => setNewAvatar(e.target.value)}
 					/>
-					<button onClick={handleUpdateAvatar}>Change Avatar</button>
+					<button
+						onClick={handleUpdateAvatar}
+						className='border-2 border-white rounded-md p-1'
+					>
+						Change Avatar
+					</button>
 				</div>
 			) : (
 				<p>Loading avatar...</p>
 			)}
 			{user ? (
 				<>
-					<p>User name: {user.displayName}</p>
-					<input
-						type='text'
-						placeholder='New name'
-						value={newName}
-						onChange={e => setNewName(e.target.value)}
-					/>
-					<button onClick={handleUpdateName}>Change Name</button>
-
-					<p>Email: {user.email}</p>
-					<input
-						type='email'
-						placeholder='New email'
-						value={newEmail}
-						onChange={e => setNewEmail(e.target.value)}
-					/>
-					<button onClick={handleUpdateEmail}>Change Email</button>
-
-					<p>Reset your password:</p>
-					<button onClick={handlePasswordReset}>
-						Send Password Reset Email
-					</button>
-
+					<div className='my-6'>
+						<p>User name: {user.displayName}</p>
+						<input
+							type='text'
+							placeholder='New name'
+							value={newName}
+							className='input-settings'
+							onChange={e => setNewName(e.target.value)}
+						/>
+						<button
+							onClick={handleUpdateName}
+							className='border-2 border-white rounded-md p-1'
+						>
+							Change Name
+						</button>
+					</div>
+					<div className='mb-6'>
+						<p>Email: {user.email}</p>
+						<input
+							type='email'
+							placeholder='New email'
+							value={newEmail}
+							className='input-settings'
+							onChange={e => setNewEmail(e.target.value)}
+						/>
+						<button
+							onClick={handleUpdateEmail}
+							className='border-2 border-white rounded-md p-1'
+						>
+							Change Email
+						</button>
+					</div>
+					<div className='mb-6'>
+						<p className='mb-2'>Reset your password:</p>
+						<button
+							onClick={handlePasswordReset}
+							className='border-2 border-white rounded-md p-2'
+						>
+							Send Password Reset Email
+						</button>
+					</div>
 					<button onClick={() => auth.signOut()}>Logout</button>
 				</>
 			) : (

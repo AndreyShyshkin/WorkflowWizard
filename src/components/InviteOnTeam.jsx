@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import { getDatabase, onValue, ref, set } from 'firebase/database'
+import { get, getDatabase, onValue, ref, set } from 'firebase/database'
 import React, { useEffect, useState } from 'react'
 
 function InviteOnTeam() {
@@ -8,6 +8,8 @@ function InviteOnTeam() {
 	const [role, setRole] = useState('view')
 	const [access, setAccess] = useState([])
 	const [projects, setProjects] = useState([])
+	const [emailError, setEmailError] = useState('')
+	const [isLoading, setIsLoading] = useState(false)
 
 	const auth = getAuth()
 	const database = getDatabase()
@@ -18,30 +20,20 @@ function InviteOnTeam() {
 		const unsubscribe = onAuthStateChanged(auth, user => {
 			setUser(user || null)
 		})
-
 		return () => unsubscribe()
 	}, [auth])
 
-	// Загрузка проектов и списков
 	useEffect(() => {
 		if (!teamName) return
 
-		const projectsRef = ref(database, `/teams/${teamName}/projects`)
+		const projectsRef = ref(database, `teams/${teamName}/projects`)
 		onValue(projectsRef, snapshot => {
 			const data = snapshot.val()
 			if (data) {
-				const formattedProjects = Object.entries(data).map(
-					([projectName, projectData]) => ({
-						id: projectName,
-						name: projectName,
-						lists: projectData.lists
-							? Object.entries(projectData.lists).map(([listName]) => ({
-									id: listName,
-									name: listName,
-							  }))
-							: [],
-					})
-				)
+				const formattedProjects = Object.entries(data).map(([projectName]) => ({
+					id: projectName,
+					name: projectName,
+				}))
 				setProjects(formattedProjects)
 			} else {
 				setProjects([])
@@ -49,7 +41,38 @@ function InviteOnTeam() {
 		})
 	}, [database, teamName])
 
-	// Генерация случайной строки
+	// Валидация email
+	const validateEmail = email => {
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+		if (!email) {
+			setEmailError('Email is required')
+			return false
+		}
+		if (!emailRegex.test(email)) {
+			setEmailError('Please enter a valid email')
+			return false
+		}
+		setEmailError('')
+		return true
+	}
+
+	// Проверка существующих приглашений
+	const checkExistingInvites = async email => {
+		const invitesRef = ref(database, `teams/${teamName}/invites`)
+		const snapshot = await get(invitesRef)
+		const invites = snapshot.val()
+
+		if (invites) {
+			// Проверяем все приглашения
+			for (const invite of Object.values(invites)) {
+				if (invite.email.toLowerCase() === email.toLowerCase()) {
+					return true // Приглашение уже существует
+				}
+			}
+		}
+		return false // Приглашение не найдено
+	}
+
 	function generateRandomString(length) {
 		const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 		let result = ''
@@ -59,9 +82,7 @@ function InviteOnTeam() {
 		return result
 	}
 
-	const randomString = generateRandomString(24)
-
-	const sendWelcomeEmail = async email => {
+	const sendWelcomeEmail = async (email, inviteCode) => {
 		try {
 			const response = await fetch('/.netlify/functions/sendEmail', {
 				method: 'POST',
@@ -71,11 +92,7 @@ function InviteOnTeam() {
 				body: JSON.stringify({
 					email,
 					subject: 'Invite to the Team!',
-					message:
-						'Link to invite https://hakaton24.netlify.app/invite?name=' +
-						teamName +
-						'&key=' +
-						randomString,
+					message: `Link to invite https://hakaton24.netlify.app/invite?name=${teamName}&key=${inviteCode}`,
 				}),
 			})
 
@@ -91,146 +108,140 @@ function InviteOnTeam() {
 	}
 
 	async function submit() {
-		const inviteRef = ref(database, `teams/${teamName}/invites/${randomString}`)
 		try {
-			const inviteData = {
-				inviteCode: randomString,
-				role: role,
-				from: user.displayName,
-				email: email,
+			setIsLoading(true)
+
+			// Валидация email
+			if (!validateEmail(email)) {
+				setIsLoading(false)
+				return
 			}
 
-			if (role !== 'admin') {
-				inviteData.access = access
+			// Проверка существующих приглашений
+			const inviteExists = await checkExistingInvites(email)
+			if (inviteExists) {
+				setEmailError('An invite has already been sent to this email')
+				setIsLoading(false)
+				return
+			}
+
+			const inviteCode = generateRandomString(24)
+			const inviteRef = ref(database, `teams/${teamName}/invites/${inviteCode}`)
+
+			const inviteData = {
+				inviteCode,
+				role,
+				from: user?.displayName || 'Unknown',
+				email: email.toLowerCase(), // Сохраняем email в нижнем регистре
+				access: role === 'admin' ? 'all' : access,
+				createdAt: new Date().toISOString(), // Добавляем дату создания
 			}
 
 			await set(inviteRef, inviteData)
-			await sendWelcomeEmail(email)
-			console.log('Invite created successfully')
+			await sendWelcomeEmail(email, inviteCode)
+
+			// Очистка формы после успешной отправки
+			setEmail('')
+			setAccess([])
+			setRole('view')
+			setEmailError('')
+
+			alert('Invitation sent successfully!')
 		} catch (error) {
-			console.error('Error creating invite:', error.code, error.message)
+			console.error('Error creating invite:', error)
+			setEmailError('Failed to send invite. Please try again.')
+		} finally {
+			setIsLoading(false)
 		}
 	}
 
-	// Обновление выбранных доступов
 	const toggleProject = projectId => {
-		const project = projects.find(p => p.id === projectId)
-		const projectListsKeys = project.lists.map(
-			list => `${projectId}-${list.id}`
-		)
-
-		if (projectListsKeys.every(key => access.includes(key))) {
-			// Убираем все списки, если они уже выбраны
-			setAccess(prevAccess =>
-				prevAccess.filter(key => !projectListsKeys.includes(key))
-			)
-		} else {
-			// Добавляем все списки, если хотя бы один не выбран
-			setAccess(prevAccess => [
-				...new Set([...prevAccess, ...projectListsKeys]),
-			])
-		}
+		setAccess(prevAccess => {
+			if (prevAccess.includes(projectId)) {
+				return prevAccess.filter(id => id !== projectId)
+			} else {
+				return [...prevAccess, projectId]
+			}
+		})
 	}
 
-	const toggleList = (projectId, listId) => {
-		const key = `${projectId}-${listId}`
-		const project = projects.find(p => p.id === projectId)
-		const projectListsKeys = project.lists.map(
-			list => `${projectId}-${list.id}`
-		)
-
-		setAccess(
-			prevAccess =>
-				prevAccess.includes(key)
-					? prevAccess.filter(item => item !== key) // Снять галочку с list
-					: [...prevAccess, key] // Поставить галочку на list
-		)
-
-		// Обновление галочки для проекта
-		const updatedAccess = access.includes(key)
-			? access.filter(item => item !== key)
-			: [...access, key]
-
-		if (projectListsKeys.every(listKey => updatedAccess.includes(listKey))) {
-			// Если все lists выбраны, ставим галочку на проект
-			setAccess(prevAccess => [
-				...new Set([...prevAccess, ...projectListsKeys]),
-			])
+	// Обработчик изменения email с валидацией
+	const handleEmailChange = e => {
+		const newEmail = e.target.value
+		setEmail(newEmail)
+		// Очищаем ошибку при вводе
+		if (emailError) {
+			setEmailError('')
 		}
 	}
 
 	return (
 		<div className='invite-on-team'>
-			<input
-				placeholder='Email'
-				value={email}
-				onChange={e => setEmail(e.target.value)}
-			/>
-			<div className='radio'>
-				<label>
-					<input
-						type='radio'
-						value='view'
-						checked={role === 'view'}
-						onChange={() => setRole('view')}
-					/>
-					View
-				</label>
-			</div>
-			<div className='radio'>
-				<label>
-					<input
-						type='radio'
-						value='edit'
-						checked={role === 'edit'}
-						onChange={() => setRole('edit')}
-					/>
-					Edit
-				</label>
-			</div>
-			<div className='radio'>
-				<label>
-					<input
-						type='radio'
-						value='admin'
-						checked={role === 'admin'}
-						onChange={() => setRole('admin')}
-					/>
-					Admin
-				</label>
+			<h2 className='text-center text-3xl my-10'>Invite on Team</h2>
+
+			<div className='mb-4'>
+				<span className='block mb-2'>Enter email</span>
+				<input
+					className={`w-full p-2 border rounded ${
+						emailError ? 'border-red-500' : ''
+					} invite-input`}
+					placeholder='Email'
+					value={email}
+					onChange={handleEmailChange}
+				/>
+				{emailError && (
+					<p className='text-red-500 text-sm mt-1'>{emailError}</p>
+				)}
 			</div>
 
-			{role !== 'admin' && (
-				<div>
-					{projects.map(project => (
-						<div key={project.id}>
-							<label>
+			<div className='mb-4'>
+				<p className='mb-2'>Select role</p>
+				<div className='flex gap-4'>
+					{['view', 'edit', 'admin'].map(roleOption => (
+						<div key={roleOption} className='radio'>
+							<label className='flex items-center gap-2'>
 								<input
-									type='checkbox'
-									checked={project.lists.every(list =>
-										access.includes(`${project.id}-${list.id}`)
-									)}
-									onChange={() => toggleProject(project.id)}
+									type='radio'
+									value={roleOption}
+									checked={role === roleOption}
+									onChange={() => setRole(roleOption)}
 								/>
-								{project.name}
+								{roleOption.charAt(0).toUpperCase() + roleOption.slice(1)}
 							</label>
-							<div style={{ marginLeft: '20px' }}>
-								{project.lists.map(list => (
-									<label key={list.id}>
-										<input
-											type='checkbox'
-											checked={access.includes(`${project.id}-${list.id}`)}
-											onChange={() => toggleList(project.id, list.id)}
-										/>
-										{list.name}
-									</label>
-								))}
-							</div>
 						</div>
 					))}
 				</div>
+			</div>
+
+			{role !== 'admin' && (
+				<div className='mb-4'>
+					<p className='mb-2'>Select access</p>
+					<div className='space-y-2'>
+						{projects.map(project => (
+							<div key={project.id} className='border rounded p-2'>
+								<label className='flex items-center gap-2'>
+									<input
+										type='checkbox'
+										checked={access.includes(project.id)}
+										onChange={() => toggleProject(project.id)}
+									/>
+									{project.name}
+								</label>
+							</div>
+						))}
+					</div>
+				</div>
 			)}
-			<button onClick={submit}>Пригласить в команду</button>
+
+			<button
+				onClick={submit}
+				className='w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed'
+				disabled={
+					!email || (role !== 'admin' && access.length === 0) || isLoading
+				}
+			>
+				{isLoading ? 'Sending...' : 'Пригласить в команду'}
+			</button>
 		</div>
 	)
 }

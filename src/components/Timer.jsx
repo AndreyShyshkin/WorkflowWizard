@@ -47,7 +47,7 @@ const Timer = () => {
 	}
 
 	return (
-		<div className='timer p-4 border-l  fixed right-0 top-0 h-full shadow-lg'>
+		<div className='timer p-4 border-2 right-0 top-0 h-full shadow-lg'>
 			<h2 className='text-lg font-bold mb-4'>Timer</h2>
 			<div className='time-display text-4xl font-mono text-center mb-4'>
 				{formatTime(time)}

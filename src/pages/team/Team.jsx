@@ -1,7 +1,7 @@
-import { useNavigate, Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import { getDatabase, ref, get, update } from 'firebase/database'
+import { get, getDatabase, ref, update } from 'firebase/database'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import CreateProject from '../../components/CreateProject'
 import InviteOnTeam from '../../components/InviteOnTeam'
 
@@ -197,48 +197,108 @@ function Team() {
 					<span>Вы не состоите в этой команде</span>
 				) : (
 					<div>
-						<span>
-							{user.displayName} Добро пожаловать в команду {teamName}
-						</span>
-						<button onClick={handleChangeTeam}>Сменить команду</button>
-						<button onClick={handleLogoutTeam}>Выход</button>
+						<div className='flex mb-6'>
+							<span className='text-2xl my-auto'>
+								Welcome to the team {teamName}
+							</span>
+							<button
+								className='btn-team text-xl my-auto btn-orange'
+								onClick={handleChangeTeam}
+							>
+								Change team
+							</button>
+							<button
+								className='btn-team text-xl my-auto btn-red'
+								onClick={handleLogoutTeam}
+							>
+								Exit
+							</button>
+						</div>
 						{userProjects.length > 0 ? (
 							<div>
-								<h3>Team Projects</h3>
-								<ul>
+								<h3 className='text-2xl mt-8 mb-4'>Team Projects</h3>
+								<div className='mt-4 grid gap-4 lg:grid-cols-3 cursor-pointer'>
 									{userProjects.map(project => (
-										<li key={project}>
-											<span>{project}</span>
-											<Link
-												to={`/team/project?teamname=${teamName}&projectname=${project}`}
-												style={{ marginLeft: '10px' }}
-											>
-												Go to project
-											</Link>
-										</li>
+										<Link
+											key={project}
+											to={`/team/project?teamname=${teamName}&projectname=${project}`}
+										>
+											<div className='relative max-lg:row-start-1'>
+												<div className='absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]'></div>
+												<div className='relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]'>
+													<div className='px-8 pt-4 sm:px-10 sm:pt-5'>
+														<p className='text-lg/7 font-medium tracking-tight text-gray-950 max-lg:text-center'>
+															Project name: {project}
+														</p>
+														<p className='mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center'>
+															Go to project
+														</p>
+													</div>
+													<div className='flex flex-1 items-center justify-center px-8 py-6 max-lg:pt-10 sm:px-10'></div>
+												</div>
+												<div className='pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]'></div>
+											</div>
+										</Link>
 									))}
-								</ul>
+									<div>
+										<div className='relative max-lg:row-start-1'>
+											<div className='absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]'></div>
+											<div className='relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]'>
+												<div className='px-8 pt-4 sm:px-10 sm:pt-5'>
+													<p className='text-lg/7 font-medium tracking-tight text-gray-950 max-lg:text-center'>
+														{['admin', 'edit'].includes(userRole) && (
+															<CreateProject />
+														)}
+													</p>
+												</div>
+												<div className='flex flex-1 items-center justify-center px-8 py-5 max-lg:pt-10 sm:px-10'></div>
+											</div>
+											<div className='pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]'></div>
+										</div>
+									</div>
+								</div>
 							</div>
 						) : (
-							<h3>The team does not have any projects yet.</h3>
+							<>
+								<h3 className='text-center text-3xl my-10'>
+									The team does not have any projects yet.
+								</h3>
+								<div className='mt-4 grid gap-4 lg:grid-cols-3 cursor-pointer'>
+									<div>
+										<div className='relative max-lg:row-start-1'>
+											<div className='absolute inset-px rounded-lg bg-white max-lg:rounded-t-[2rem]'></div>
+											<div className='relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)]'>
+												<div className='px-8 pt-4 sm:px-10 sm:pt-5'>
+													<p className='text-lg/7 font-medium tracking-tight text-gray-950 max-lg:text-center'>
+														{['admin', 'edit'].includes(userRole) && (
+															<CreateProject />
+														)}
+													</p>
+												</div>
+												<div className='flex flex-1 items-center justify-center px-8 py-5 max-lg:pt-10 sm:px-10'></div>
+											</div>
+											<div className='pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 max-lg:rounded-t-[2rem]'></div>
+										</div>
+									</div>
+								</div>
+							</>
 						)}
-
-						{['admin', 'edit'].includes(userRole) && <CreateProject />}
+						<hr className='my-8' />
 						{userRole === 'admin' && <InviteOnTeam />}
-
-						<h3>Состав команды:</h3>
+						<hr className='my-8' />
+						<h3 className='text-center text-3xl my-10'>Team composition:</h3>
 						<ul>
 							{teamUsers.map(teamUser => (
-								<li key={teamUser.uid}>
+								<li key={teamUser.uid} className='text-center text-xl my-2'>
 									{teamUser.username}
-									{teamUser.uid === user.uid && <spab>(ВЫ)</spab>}
+									{teamUser.uid === user.uid && <span>(YOU)</span>}
 								</li>
 							))}
 						</ul>
 					</div>
 				)
 			) : (
-				<span>Переадресация...</span>
+				<span>Redirection...</span>
 			)}
 		</div>
 	)

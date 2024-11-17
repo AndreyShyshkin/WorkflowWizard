@@ -18,7 +18,7 @@ function CreateProject() {
 			if (currentUser) {
 				setUser(currentUser)
 			} else {
-				navigate('/login')
+				navigate('/auth')
 			}
 		})
 
@@ -72,9 +72,10 @@ function CreateProject() {
 				type='text'
 				placeholder='Enter project name'
 				value={projectName}
+				className='create-project-input'
 				onChange={e => setProjectName(e.target.value)}
 			/>
-			<button type='submit' onClick={handleCreateProject}>
+			<button type='submit' onClick={handleCreateProject} className='mt-4'>
 				Create Project
 			</button>
 		</div>

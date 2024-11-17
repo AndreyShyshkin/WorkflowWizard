@@ -11,38 +11,13 @@ function CreateTeam() {
 	const auth = getAuth()
 	const database = getDatabase()
 
-	const sendWelcomeEmail = async email => {
-		try {
-			const response = await fetch('/.netlify/functions/sendEmail', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					email,
-					subject: 'Welcome to the Team!',
-					message: 'Thank you for registering with us.',
-				}),
-			})
-
-			const data = await response.json()
-			if (response.ok) {
-				console.log('Email sent successfully:', data.message)
-			} else {
-				console.error('Error sending email:', data.error)
-			}
-		} catch (error) {
-			console.error('Error:', error)
-		}
-	}
-
 	useEffect(() => {
 		onAuthStateChanged(auth, currentUser => {
 			if (currentUser) {
 				setUser(currentUser)
 				fetchUserTeams(currentUser.uid) // Fetch teams on auth change
 			} else {
-				navigate('/login')
+				navigate('/auth')
 			}
 		})
 	}, [auth, navigate])
@@ -98,7 +73,6 @@ function CreateTeam() {
 				username: user.displayName,
 				role: 'admin',
 			})
-			//sendWelcomeEmail("shyshkinandrey06@gmail.com");
 			navigate('/team?teamname=' + trimmedName)
 		} catch (error) {
 			console.error('Error creating team:', error.code, error.message)
@@ -109,28 +83,51 @@ function CreateTeam() {
 		<div>
 			{userTeams.length > 0 ? (
 				<div>
-					<h3>Your Teams</h3>
-					<ul>
+					<h3 className='text-center text-3xl'>Your Teams</h3>
+					<ul role='list' className='divide-y divide-gray-100'>
 						{userTeams.map(team => (
-							<li key={team}>
-								<span>{team}</span>
-								<Link to={`/team?teamname=${team}`}>Go to team</Link>
-							</li>
+							<>
+								<li key={team} className='flex justify-between gap-x-6 py-5'>
+									<div className='flex min-w-0 gap-x-4'>
+										<div className='min-w-0 flex-auto'>
+											<p className='text-xl font-semibold text-white'>{team}</p>
+										</div>
+									</div>
+									<div className='hidden shrink-0 sm:flex sm:flex-col sm:items-end'>
+										<Link
+											to={`/team?teamname=${team}`}
+											className='text-gray-400'
+										>
+											Go to team
+										</Link>
+									</div>
+								</li>
+								<hr className='color-white w-full' />
+							</>
 						))}
 					</ul>
 				</div>
 			) : (
-				<h3>You have no teams</h3>
+				<h3 className='text-center text-3xl'>You have no teams</h3>
 			)}
-			<input
-				type='text'
-				placeholder='Enter team name'
-				value={teamName}
-				onChange={e => setTeamName(e.target.value)}
-			/>
-			<button type='submit' onClick={handleCreateTeam}>
-				Create Team
-			</button>
+			<div className='flex'>
+				<div className='mx-auto mt-6'>
+					<input
+						type='text'
+						placeholder='Enter team name'
+						value={teamName}
+						className='create-team-input'
+						onChange={e => setTeamName(e.target.value)}
+					/>
+					<button
+						type='submit'
+						className='create-team-button'
+						onClick={handleCreateTeam}
+					>
+						Create Team
+					</button>
+				</div>
+			</div>
 		</div>
 	)
 }

@@ -17,7 +17,7 @@ import {
 	X,
 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Container, Draggable } from 'react-smooth-dnd'
 import Timer from '../../components/Timer'
 
@@ -38,6 +38,7 @@ function Task() {
 	const projectName = urlParams.get('projectname')
 	const taskName = urlParams.get('taskname')
 	const deadline = urlParams.get('deadline')
+	const priority = urlParams.get('priority')
 
 	const fetchSections = () => {
 		const sectionsRef = ref(
@@ -88,21 +89,17 @@ function Task() {
 			return
 		}
 
-		// Обновляем локальное состояние немедленно
 		const newSections = [...sections]
 		const [removed] = newSections.splice(removedIndex, 1)
 		newSections.splice(addedIndex, 0, removed)
 
-		// Обновляем порядковые номера
 		const updatedSections = newSections.map((section, index) => ({
 			...section,
 			order: index,
 		}))
 
-		// Обновляем локальное состояние
 		setSections(updatedSections)
 
-		// Обновляем Firebase
 		const sectionsRef = ref(
 			database,
 			`teams/${teamName}/projects/${projectName}/tasks/${deadline}/${taskName}/sections`
@@ -122,7 +119,6 @@ function Task() {
 			}, {})
 		).catch(error => {
 			console.error('Error updating Firebase:', error)
-			// Восстанавливаем предыдущее состояние при ошибке
 			setSections(sections)
 		})
 	}
@@ -144,7 +140,6 @@ function Task() {
 		const section = sections.find(s => s.id === sectionId)
 		const todos = section.todos || {}
 
-		// Находим максимальный порядковый номер
 		const maxOrder = Object.values(todos).reduce(
 			(max, todo) => Math.max(max, todo.order || 0),
 			0
@@ -155,7 +150,7 @@ function Task() {
 			[Date.now()]: {
 				text: newTaskText,
 				completed: false,
-				order: maxOrder + 1, // Добавляем новый элемент в конец
+				order: maxOrder + 1,
 			},
 		}
 
@@ -328,7 +323,7 @@ function Task() {
 														value: e.target.value,
 													}))
 												}
-												className='w-full outline-none'
+												className='w-full outline-none input-table'
 											/>
 										</td>
 									))}
@@ -512,14 +507,21 @@ function Task() {
 
 	return (
 		<div className='flex'>
-			<div className='max-w-2xl mx-auto p-4'>
+			<div className='w-full p-4'>
+				<Link
+					to={`/team/project?teamname=${teamName}&projectname=${projectName}`}
+					className='text-gray-500'
+				>
+					Go back
+				</Link>
 				<h1 className='text-2xl font-bold mb-4'>Task: {taskName}</h1>
-				<p className='mb-6'>Deadline: {deadline}</p>
+				<p className='mb-2'>Deadline: {deadline}</p>
+				<p className='mb-6'>Priority: {priority}</p>
 
 				<Container onDrop={onDrop}>
 					{sections.map(section => (
 						<Draggable key={section.id}>
-							<div className='mb-6 rounded-lg shadow p-4'>
+							<div className='mb-6 rounded-lg shadow p-4 pl-0'>
 								<div className='flex items-center justify-between mb-2'>
 									<div className='cursor-move'>
 										<GripVertical className='h-5 w-5 text-gray-400' />
@@ -551,11 +553,11 @@ function Task() {
 
 				{sections.length === 0 ? (
 					// Показываем сообщение и кнопки, если нет секций
-					<div className='text-center py-8'>
+					<div className='text-left py-8'>
 						<p className='text-gray-500 mb-4'>
 							No sections yet. Create your first section:
 						</p>
-						<div className='flex gap-2 justify-center'>
+						<div className='flex gap-2 justify-left'>
 							<button
 								onClick={() => handleAddSection('text')}
 								className='bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 flex items-center gap-1'
